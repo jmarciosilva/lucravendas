@@ -210,35 +210,65 @@ composer require filament/spatie-laravel-media-library-plugin:"^3.3"
 
 ---
 
-## FASE 4 — Pagamentos
+## FASE 4 — Pagamentos via Mercado Pago
 
-> Objetivo: integrar PIX e cartão de crédito com pelo menos um gateway.
+> Objetivo: integrar PIX, cartão de crédito e demais formas de pagamento via Mercado Pago —
+> gateway único que cobre todos os métodos necessários para o mercado brasileiro.
 
 ### 4.1 Estrutura base
 
-- [ ] Criar interface `PaymentGateway` com métodos: `createCharge`, `refund`, `getStatus`
-- [ ] Migration `payment_transactions` (`order_id`, `gateway`, `gateway_id`, `method`, `amount`, `status`, `payload` JSON)
-- [ ] Configurar `config/payments.php`
+- [ ] Criar `PaymentGatewayInterface` com métodos: `createCharge`, `refund`, `getStatus`
+- [ ] Migration `payment_transactions` (`order_id`, `gateway`, `external_id`, `method`, `amount`, `status`, `qr_code nullable`, `qr_code_base64 nullable`, `ticket_url nullable`, `payload` JSON)
+- [ ] Configurar `config/payments.php` com credenciais e modo sandbox
 
-### 4.2 Integração EFI / Gerencianet (PIX prioritário)
+```bash
+composer require mercadopago/dx-php
+```
 
-- [ ] `composer require efi-pay/efi-pay-php`
-- [ ] Implementar `EfiGateway` com geração de QR Code PIX
-- [ ] `POST /api/v1/payments/pix` — gerar cobrança PIX
-- [ ] `POST /api/v1/webhooks/efi` — processar notificação de pagamento
+```dotenv
+MERCADO_PAGO_ACCESS_TOKEN=
+MERCADO_PAGO_PUBLIC_KEY=
+MERCADO_PAGO_WEBHOOK_SECRET=
+MERCADO_PAGO_SANDBOX=true
+```
 
-### 4.3 Integração Stripe (cartão de crédito)
+### 4.2 Implementação do MercadoPagoGateway
 
-- [ ] `composer require stripe/stripe-php`
-- [ ] Implementar `StripeGateway` com Payment Intents
-- [ ] `POST /api/v1/payments/card` — criar payment intent
-- [ ] `POST /api/v1/webhooks/stripe` — confirmação de pagamento
+- [ ] Implementar `MercadoPagoGateway` no módulo Payments
+- [ ] **PIX** — gerar preferência de pagamento com QR Code + copia-e-cola
+- [ ] **Cartão de crédito** — receber card token (gerado pelo frontend via SDK JS) + criar cobrança
+- [ ] **Boleto bancário** — gerar boleto com linha digitável e URL de pagamento
+- [ ] Método `getStatus()` — consultar status da transação por `external_id`
+- [ ] Método `refund()` — estornar transação paga
 
-### 4.4 Testes
+### 4.3 API de pagamentos
 
-- [ ] Teste com sandbox de cada gateway
-- [ ] Teste: webhook inválido (assinatura errada) retorna 401
-- [ ] Teste: pedido atualiza para `paid` após webhook de sucesso
+- [ ] `POST /api/v1/payments/pix` — gerar cobrança PIX (retorna `qr_code` e `qr_code_base64`)
+- [ ] `POST /api/v1/payments/card` — processar cartão (recebe `card_token` + `installments`)
+- [ ] `POST /api/v1/payments/boleto` — gerar boleto bancário
+- [ ] `GET  /api/v1/payments/{orderId}/status` — consultar status do pagamento
+- [ ] `POST /api/v1/webhooks/mercadopago` — receber notificações (IPN/webhook) do Mercado Pago
+
+### 4.4 Lógica de negócio no webhook
+
+- [ ] Validar assinatura do webhook (`x-signature` header)
+- [ ] Ao receber status `approved`: atualizar `order.payment_status = paid`, `order.status = confirmed`; registrar em `order_status_history`
+- [ ] Ao receber status `rejected` ou `cancelled`: atualizar pedido e devolver estoque
+- [ ] Ao receber status `refunded`: atualizar `payment_status = refunded`
+
+### 4.5 Admin — gestão de pagamentos
+
+- [ ] `PaymentTransactionResource` no Filament (listar, visualizar payload, reembolsar)
+- [ ] Widget de receita do dia / do mês no dashboard admin
+- [ ] Filtros por status de pagamento, método e período
+
+### 4.6 Testes
+
+- [ ] Teste: criar cobrança PIX retorna `qr_code` e `external_id`
+- [ ] Teste: webhook com assinatura inválida retorna 401
+- [ ] Teste: webhook `approved` atualiza pedido para `confirmed` e `paid`
+- [ ] Teste: webhook `rejected` devolve estoque ao produto
+- [ ] Teste unitário: `MercadoPagoGateway` com mock do SDK
 
 ---
 
@@ -324,9 +354,16 @@ composer require filament/spatie-laravel-media-library-plugin:"^3.3"
 
 | Decisão | Opções | Prazo |
 |---|---|---|
-| Gateway de pagamento principal | EFI vs Stripe vs Pagar.me | Fase 4 |
-| Split de pagamento marketplace | Stripe Connect vs EFI Split vs manual | Fase 5 |
+| Split de pagamento marketplace | Mercado Pago Split (Marketplace) vs manual | Fase 5 |
 | Servidor de produção | AWS vs Hetzner | Fase 9 |
+
+## Decisões técnicas resolvidas
+
+| Decisão | Escolha | Motivo |
+|---|---|---|
+| Gateway de pagamento | **Mercado Pago** | Cobre PIX, cartão, boleto e demais métodos brasileiros em um único SDK. Tem sandbox completo e suporte nativo a marketplace split. |
+| Identificação de tenants na API | **Header `X-Tenant-ID`** | Compatível com API mobile e web sem exigir DNS wildcard em desenvolvimento. |
+| Isolamento de tenants | **Coluna `tenant_id`** | Simples, sem overhead de múltiplos bancos, adequado para o volume inicial da plataforma. |
 
 ---
 

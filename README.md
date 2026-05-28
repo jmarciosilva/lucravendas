@@ -177,14 +177,11 @@ FILAMENT_FILESYSTEM_DISK=local
 # E-mail
 MAIL_MAILER=log          # Produção: smtp
 
-# Gateway de pagamento (EFI/Gerencianet)
-EFI_CLIENT_ID=
-EFI_CLIENT_SECRET=
-EFI_SANDBOX=true
-
-# Stripe (opcional)
-STRIPE_KEY=
-STRIPE_SECRET=
+# Mercado Pago (PIX, cartão, boleto)
+MERCADO_PAGO_ACCESS_TOKEN=
+MERCADO_PAGO_PUBLIC_KEY=
+MERCADO_PAGO_WEBHOOK_SECRET=
+MERCADO_PAGO_SANDBOX=true
 ```
 
 ---
@@ -225,9 +222,27 @@ PUT    /api/v1/products/{id}
 DELETE /api/v1/products/{id}
 POST   /api/v1/products/{id}/images
 
-# Pedidos e marketplace (fases futuras)
+# Carrinho (público — anônimo ou autenticado)
+GET    /api/v1/cart
+POST   /api/v1/cart/items
+PUT    /api/v1/cart/items/{id}
+DELETE /api/v1/cart/items/{id}
+POST   /api/v1/cart/coupon
+DELETE /api/v1/cart/coupon
+
+# Checkout e pedidos (requer autenticação)
 POST   /api/v1/checkout
 GET    /api/v1/orders
+GET    /api/v1/orders/{id}
+
+# Pagamentos via Mercado Pago (Fase 4 — em desenvolvimento)
+POST   /api/v1/payments/pix
+POST   /api/v1/payments/card
+POST   /api/v1/payments/boleto
+GET    /api/v1/payments/{orderId}/status
+POST   /api/v1/webhooks/mercadopago
+
+# Marketplace (fases futuras)
 GET    /api/v1/marketplace/sellers
 ```
 
@@ -281,7 +296,7 @@ php artisan test --testsuite=Feature
 php artisan test --coverage
 ```
 
-53 testes passando. Os testes usam SQLite em memória — independentes do banco principal.
+83 testes passando. Os testes usam SQLite em memória — independentes do banco principal.
 
 ---
 
@@ -316,8 +331,8 @@ O projeto segue **Domain-Driven Design (DDD)**:
 |---|---|---|
 | 1 | Fundação: setup, multi-tenancy, autenticação, painel admin base | Concluída |
 | 2 | Catálogo: produtos, categorias, API, importação via planilha | Concluída |
-| 3 | Carrinho e checkout | Pendente |
-| 4 | Pagamentos (PIX + cartão) | Pendente |
+| 3 | Carrinho e checkout | Concluída |
+| 4 | Pagamentos via Mercado Pago (PIX, cartão, boleto) | Em andamento |
 | 5 | Marketplace multi-seller | Pendente |
 | 6 | Frete e logística | Pendente |
 | 7 | LucraMarketing nativo | Pendente |
