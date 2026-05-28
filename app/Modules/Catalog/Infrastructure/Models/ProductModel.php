@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Modules\Catalog\Infrastructure\Models;
 
+use App\Modules\Marketplace\Infrastructure\Models\SellerModel;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
@@ -41,6 +42,7 @@ class ProductModel extends Model implements HasMedia
         'status',
         'category_id',
         'tenant_id',
+        'seller_id',
     ];
 
     /** @var array<string, string> */
@@ -55,6 +57,12 @@ class ProductModel extends Model implements HasMedia
     public function category(): BelongsTo
     {
         return $this->belongsTo(CategoryModel::class, 'category_id');
+    }
+
+    /** Seller responsável por este produto (nullable para produtos do próprio tenant) */
+    public function seller(): BelongsTo
+    {
+        return $this->belongsTo(SellerModel::class, 'seller_id');
     }
 
     /** Variantes do produto (tamanho, cor, etc.) */

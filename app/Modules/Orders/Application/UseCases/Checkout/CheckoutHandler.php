@@ -6,6 +6,7 @@ namespace App\Modules\Orders\Application\UseCases\Checkout;
 
 use App\Modules\Catalog\Domain\ValueObjects\Money;
 use App\Modules\Catalog\Infrastructure\Models\ProductModel;
+use App\Modules\Marketplace\Application\UseCases\CalculateCommissions\CommissionCalculatorService;
 use App\Modules\Orders\Application\UseCases\GetCart\GetCartHandler;
 use App\Modules\Orders\Domain\Entities\Order;
 use App\Modules\Orders\Domain\Entities\OrderItem;
@@ -20,10 +21,11 @@ use RuntimeException;
 final class CheckoutHandler
 {
     public function __construct(
-        private readonly CartRepositoryInterface  $cartRepository,
-        private readonly OrderRepositoryInterface $orderRepository,
-        private readonly GetCartHandler           $getCartHandler,
-        private readonly Dispatcher               $events,
+        private readonly CartRepositoryInterface     $cartRepository,
+        private readonly OrderRepositoryInterface    $orderRepository,
+        private readonly GetCartHandler              $getCartHandler,
+        private readonly CommissionCalculatorService $commissionCalculator,
+        private readonly Dispatcher                  $events,
     ) {}
 
     public function handle(CheckoutCommand $command): Order
@@ -119,7 +121,10 @@ final class CheckoutHandler
                 $coupon->increment('uses_count');
             }
 
-            // 6. Limpa o carrinho
+            // 6. Calcula comissões para itens de produtos com seller vinculado
+            $this->commissionCalculator->calculateForOrder($savedOrder->id(), $productSnapshots);
+
+            // 7. Limpa o carrinho
             $this->cartRepository->delete($cart->id());
 
             return $savedOrder;

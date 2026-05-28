@@ -276,35 +276,54 @@ composer require filament/spatie-laravel-media-library-plugin:"^3.3"
 
 ---
 
-## FASE 5 — Marketplace Multi-Seller
+## FASE 5 — Marketplace Multi-Seller `[x]`
 
 > Objetivo: múltiplos sellers num marketplace compartilhado com comissões e repasses.
 
 ### 5.1 Modelo de dados
 
-- [ ] Migration `sellers` (`id`, `name`, `slug`, `tenant_id`, `commission_rate`, `status`, `bank_info` JSON)
-- [ ] Migration `commissions` (`order_item_id`, `seller_id`, `gross_amount`, `commission_amount`, `net_amount`, `status`)
-- [ ] Migration `payouts` (`seller_id`, `amount`, `status`, `paid_at`, `gateway_response` JSON)
+- [x] Migration `sellers` (`id`, `name`, `slug`, `tenant_id`, `user_id`, `commission_rate`, `status`, `bank_info` JSON, `description`)
+- [x] Migration `commissions` (`order_item_id`, `seller_id`, `gross_amount`, `commission_amount`, `net_amount`, `status`)
+- [x] Migration `payouts` (`seller_id`, `amount`, `status`, `paid_at`, `gateway_response` JSON)
+- [x] Coluna `seller_id` adicionada à tabela `products` (nullable FK para sellers)
 
 ### 5.2 API de marketplace
 
-- [ ] `GET  /api/v1/marketplace/sellers` — listagem de sellers ativos
-- [ ] `GET  /api/v1/marketplace/sellers/{slug}` — perfil do seller
-- [ ] `GET  /api/v1/marketplace/sellers/{slug}/products` — produtos do seller
-- [ ] `POST /api/v1/sellers/register` — cadastro de novo seller
-- [ ] `GET  /api/v1/seller/dashboard` — métricas do seller autenticado
+- [x] `GET  /api/v1/marketplace/sellers` — listagem de sellers ativos
+- [x] `GET  /api/v1/marketplace/sellers/{slug}` — perfil do seller
+- [x] `GET  /api/v1/marketplace/sellers/{slug}/products` — produtos do seller
+- [x] `POST /api/v1/sellers/register` — cadastro de novo seller (auth)
+- [x] `GET  /api/v1/seller/dashboard` — métricas do seller autenticado
 
 ### 5.3 Cálculo de comissões
 
-- [ ] Service `CommissionCalculator`
-- [ ] Job `ProcessPayout` — repasse para sellers (semanal via Schedule)
-- [ ] Split de pagamento via Mercado Pago Marketplace API
+- [x] `CommissionCalculatorService` — calcula e persiste comissão por item no checkout
+- [x] Cancelamento automático de comissões via listener `PaymentRejected` (pedido cancelado)
+- [x] `ProcessPayoutHandler` — agrupa comissões pendentes por seller e cria payouts
+- [x] `ProcessPayoutJob` — executa semanal (toda segunda às 9h via Schedule)
+- [!] Split de pagamento via Mercado Pago Marketplace API — desacoplado, aguarda Fase 9
 
 ### 5.4 Admin
 
-- [ ] `SellerResource` no Filament (aprovar/suspender sellers)
-- [ ] `CommissionResource` e `PayoutResource`
-- [ ] Widget: GMV, top sellers, comissão acumulada
+- [x] `SellerResource` no Filament — grupo **Marketplace**, ações Aprovar/Suspender com confirmação
+- [x] `CommissionResource` e `PayoutResource` — visualização com badges por status
+- [x] `MarketplaceStatsWidget` — GMV total, comissão a repassar, contagem de sellers ativos
+
+### 5.5 Testes — 13 testes passando (suite completa: 107 testes)
+
+- [x] Teste: usuário autenticado pode se cadastrar como seller
+- [x] Teste: seller duplicado (mesmo usuário no mesmo tenant) retorna 422
+- [x] Teste: slug duplicado no mesmo tenant retorna 422
+- [x] Teste: cadastro requer autenticação
+- [x] Teste: lista apenas sellers ativos do tenant
+- [x] Teste: perfil de seller ativo pelo slug
+- [x] Teste: seller inativo retorna 404 no perfil
+- [x] Teste: lista produtos de um seller ativo
+- [x] Teste: seller autenticado visualiza dashboard com métricas
+- [x] Teste: usuário sem seller recebe 404 no dashboard
+- [x] Teste: dashboard requer autenticação
+- [x] Teste: checkout cria comissão para produto com seller vinculado
+- [x] Teste: checkout não cria comissão para produto sem seller
 
 ---
 

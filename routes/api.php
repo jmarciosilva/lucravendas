@@ -97,6 +97,27 @@ Route::prefix('v1')->name('api.v1.')->group(function (): void {
     Route::post('/webhooks/mercadopago', [\App\Modules\Payments\Presentation\Controllers\WebhookController::class, 'mercadopago'])
         ->name('webhooks.mercadopago');
 
+    // ─── Marketplace — rotas públicas (leitura sem autenticação) ────────────
+    Route::prefix('marketplace/sellers')->name('marketplace.sellers.')->group(function (): void {
+        Route::get('/', [\App\Modules\Marketplace\Presentation\Controllers\SellerController::class, 'index'])
+            ->name('index');
+        Route::get('/{slug}', [\App\Modules\Marketplace\Presentation\Controllers\SellerController::class, 'show'])
+            ->name('show');
+        Route::get('/{slug}/products', [\App\Modules\Marketplace\Presentation\Controllers\SellerController::class, 'products'])
+            ->name('products');
+    });
+
+    // ─── Marketplace — rotas protegidas (requer autenticação) ────────────────
+    Route::middleware('auth:sanctum')->group(function (): void {
+        // Auto-cadastro de seller
+        Route::post('sellers/register', [\App\Modules\Marketplace\Presentation\Controllers\SellerController::class, 'register'])
+            ->name('sellers.register');
+
+        // Dashboard do seller autenticado
+        Route::get('seller/dashboard', [\App\Modules\Marketplace\Presentation\Controllers\SellerController::class, 'dashboard'])
+            ->name('seller.dashboard');
+    });
+
     // ─── Carrinho — público (anônimo via X-Cart-Session ou autenticado) ───────
     Route::prefix('cart')->name('cart.')->group(function (): void {
         Route::get('/', [\App\Modules\Orders\Presentation\Controllers\CartController::class, 'show'])

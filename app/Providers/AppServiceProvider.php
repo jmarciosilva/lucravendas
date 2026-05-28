@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Providers;
 
+use App\Jobs\SendOrderConfirmationEmail;
 use App\Modules\Catalog\Application\UseCases\CreateCategory\CreateCategoryHandler;
 use App\Modules\Catalog\Application\UseCases\CreateProduct\CreateProductHandler;
 use App\Modules\Catalog\Application\UseCases\DeleteProduct\DeleteProductHandler;
@@ -14,18 +15,21 @@ use App\Modules\Catalog\Domain\Repositories\CategoryRepositoryInterface;
 use App\Modules\Catalog\Domain\Repositories\ProductRepositoryInterface;
 use App\Modules\Catalog\Infrastructure\Repositories\EloquentCategoryRepository;
 use App\Modules\Catalog\Infrastructure\Repositories\EloquentProductRepository;
-use App\Jobs\SendOrderConfirmationEmail;
+use App\Modules\Marketplace\Application\UseCases\ApproveSeller\ApproveSellerHandler;
+use App\Modules\Marketplace\Application\UseCases\CalculateCommissions\CommissionCalculatorService;
+use App\Modules\Marketplace\Application\UseCases\GetSellerDashboard\GetSellerDashboardHandler;
+use App\Modules\Marketplace\Application\UseCases\GetSellerProfile\GetSellerProfileHandler;
+use App\Modules\Marketplace\Application\UseCases\ListSellers\ListSellersHandler;
+use App\Modules\Marketplace\Application\UseCases\ProcessPayout\ProcessPayoutHandler;
+use App\Modules\Marketplace\Application\UseCases\RegisterSeller\RegisterSellerHandler;
+use App\Modules\Marketplace\Application\UseCases\SuspendSeller\SuspendSellerHandler;
+use App\Modules\Marketplace\Domain\Repositories\CommissionRepositoryInterface;
+use App\Modules\Marketplace\Domain\Repositories\PayoutRepositoryInterface;
+use App\Modules\Marketplace\Domain\Repositories\SellerRepositoryInterface;
+use App\Modules\Marketplace\Infrastructure\Repositories\EloquentCommissionRepository;
+use App\Modules\Marketplace\Infrastructure\Repositories\EloquentPayoutRepository;
+use App\Modules\Marketplace\Infrastructure\Repositories\EloquentSellerRepository;
 use App\Modules\Orders\Application\UseCases\AddCartItem\AddCartItemHandler;
-use App\Modules\Orders\Domain\Events\OrderCreated;
-use App\Modules\Payments\Application\UseCases\CreateBoletoPayment\CreateBoletoPaymentHandler;
-use App\Modules\Payments\Application\UseCases\CreateCardPayment\CreateCardPaymentHandler;
-use App\Modules\Payments\Application\UseCases\CreatePixPayment\CreatePixPaymentHandler;
-use App\Modules\Payments\Application\UseCases\ProcessWebhook\ProcessWebhookHandler;
-use App\Modules\Payments\Application\UseCases\RefundPayment\RefundPaymentHandler;
-use App\Modules\Payments\Domain\Contracts\PaymentGatewayInterface;
-use App\Modules\Payments\Domain\Repositories\PaymentTransactionRepositoryInterface;
-use App\Modules\Payments\Infrastructure\Gateways\MercadoPagoGateway;
-use App\Modules\Payments\Infrastructure\Repositories\EloquentPaymentTransactionRepository;
 use App\Modules\Orders\Application\UseCases\ApplyCoupon\ApplyCouponHandler;
 use App\Modules\Orders\Application\UseCases\Checkout\CheckoutHandler;
 use App\Modules\Orders\Application\UseCases\GetCart\GetCartHandler;
@@ -33,10 +37,21 @@ use App\Modules\Orders\Application\UseCases\GetOrders\GetOrdersHandler;
 use App\Modules\Orders\Application\UseCases\RemoveCartItem\RemoveCartItemHandler;
 use App\Modules\Orders\Application\UseCases\RemoveCoupon\RemoveCouponHandler;
 use App\Modules\Orders\Application\UseCases\UpdateCartItem\UpdateCartItemHandler;
+use App\Modules\Orders\Domain\Events\OrderCreated;
 use App\Modules\Orders\Domain\Repositories\CartRepositoryInterface;
 use App\Modules\Orders\Domain\Repositories\OrderRepositoryInterface;
 use App\Modules\Orders\Infrastructure\Repositories\EloquentCartRepository;
 use App\Modules\Orders\Infrastructure\Repositories\EloquentOrderRepository;
+use App\Modules\Payments\Application\UseCases\CreateBoletoPayment\CreateBoletoPaymentHandler;
+use App\Modules\Payments\Application\UseCases\CreateCardPayment\CreateCardPaymentHandler;
+use App\Modules\Payments\Application\UseCases\CreatePixPayment\CreatePixPaymentHandler;
+use App\Modules\Payments\Application\UseCases\ProcessWebhook\ProcessWebhookHandler;
+use App\Modules\Payments\Application\UseCases\RefundPayment\RefundPaymentHandler;
+use App\Modules\Payments\Domain\Contracts\PaymentGatewayInterface;
+use App\Modules\Payments\Domain\Events\PaymentRejected;
+use App\Modules\Payments\Domain\Repositories\PaymentTransactionRepositoryInterface;
+use App\Modules\Payments\Infrastructure\Gateways\MercadoPagoGateway;
+use App\Modules\Payments\Infrastructure\Repositories\EloquentPaymentTransactionRepository;
 use App\Modules\Tenant\Application\UseCases\LoginUser\LoginUserHandler;
 use App\Modules\Tenant\Application\UseCases\RegisterUser\RegisterUserHandler;
 use Illuminate\Support\Facades\Event;
@@ -93,6 +108,21 @@ final class AppServiceProvider extends ServiceProvider
         $this->app->bind(CreateBoletoPaymentHandler::class, CreateBoletoPaymentHandler::class);
         $this->app->bind(ProcessWebhookHandler::class, ProcessWebhookHandler::class);
         $this->app->bind(RefundPaymentHandler::class, RefundPaymentHandler::class);
+
+        // ─── Módulo Marketplace — repositórios ────────────────────────────────
+        $this->app->bind(SellerRepositoryInterface::class, EloquentSellerRepository::class);
+        $this->app->bind(CommissionRepositoryInterface::class, EloquentCommissionRepository::class);
+        $this->app->bind(PayoutRepositoryInterface::class, EloquentPayoutRepository::class);
+
+        // ─── Módulo Marketplace — handlers de Use Cases ───────────────────────
+        $this->app->bind(RegisterSellerHandler::class, RegisterSellerHandler::class);
+        $this->app->bind(ApproveSellerHandler::class, ApproveSellerHandler::class);
+        $this->app->bind(SuspendSellerHandler::class, SuspendSellerHandler::class);
+        $this->app->bind(ListSellersHandler::class, ListSellersHandler::class);
+        $this->app->bind(GetSellerProfileHandler::class, GetSellerProfileHandler::class);
+        $this->app->bind(GetSellerDashboardHandler::class, GetSellerDashboardHandler::class);
+        $this->app->bind(CommissionCalculatorService::class, CommissionCalculatorService::class);
+        $this->app->bind(ProcessPayoutHandler::class, ProcessPayoutHandler::class);
     }
 
     public function boot(): void
@@ -100,6 +130,11 @@ final class AppServiceProvider extends ServiceProvider
         // Listener: OrderCreated → envia e-mail de confirmação
         Event::listen(OrderCreated::class, function (OrderCreated $event): void {
             dispatch(new SendOrderConfirmationEmail($event));
+        });
+
+        // Listener: PaymentRejected → cancela comissões pendentes do pedido
+        Event::listen(PaymentRejected::class, function (PaymentRejected $event): void {
+            app(CommissionRepositoryInterface::class)->cancelByOrderId($event->orderId);
         });
     }
 }

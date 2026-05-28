@@ -11,3 +11,6 @@ Artisan::command('inspire', function () {
 
 // Remove carrinhos abandonados há mais de 24h — executa a cada hora
 Schedule::job(new ExpireAbandonedCarts)->hourly()->name('expire-abandoned-carts');
+
+// Processa repasses financeiros para sellers — executa toda segunda-feira às 9h
+Schedule::job(new \App\Jobs\ProcessPayoutJob)->weeklyOn(1, '9:00')->name('process-seller-payouts');
