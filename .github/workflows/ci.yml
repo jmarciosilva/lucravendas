@@ -1,0 +1,107 @@
+name: CI — Lint e Testes
+
+on:
+  push:
+    branches: [main, develop]
+  pull_request:
+    branches: [main, develop]
+
+jobs:
+  lint:
+    name: Lint (Laravel Pint / PSR-12)
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout do código
+        uses: actions/checkout@v4
+
+      - name: Configurar PHP 8.2
+        uses: shivammathur/setup-php@v2
+        with:
+          php-version: "8.2"
+          extensions: mbstring, xml, ctype, json, bcmath, pdo, pdo_mysql, redis
+          coverage: none
+
+      - name: Cache das dependências Composer
+        uses: actions/cache@v4
+        with:
+          path: vendor
+          key: ${{ runner.os }}-composer-${{ hashFiles('composer.lock') }}
+          restore-keys: ${{ runner.os }}-composer-
+
+      - name: Instalar dependências PHP
+        run: composer install --no-interaction --prefer-dist --optimize-autoloader
+
+      - name: Executar Laravel Pint
+        run: vendor/bin/pint --test
+
+  tests:
+    name: Testes (Pest)
+    runs-on: ubuntu-latest
+    needs: lint
+
+    services:
+      mysql:
+        image: mysql:8.0
+        env:
+          MYSQL_ROOT_PASSWORD: root_secret
+          MYSQL_DATABASE: lucravendas_test
+          MYSQL_USER: lucravendas
+          MYSQL_PASSWORD: secret
+        ports:
+          - 3306:3306
+        options: >-
+          --health-cmd="mysqladmin ping"
+          --health-interval=10s
+          --health-timeout=5s
+          --health-retries=5
+
+    steps:
+      - name: Checkout do código
+        uses: actions/checkout@v4
+
+      - name: Configurar PHP 8.2
+        uses: shivammathur/setup-php@v2
+        with:
+          php-version: "8.2"
+          extensions: mbstring, xml, ctype, json, bcmath, pdo, pdo_mysql, redis
+          coverage: xdebug
+
+      - name: Cache das dependências Composer
+        uses: actions/cache@v4
+        with:
+          path: vendor
+          key: ${{ runner.os }}-composer-${{ hashFiles('composer.lock') }}
+          restore-keys: ${{ runner.os }}-composer-
+
+      - name: Instalar dependências PHP
+        run: composer install --no-interaction --prefer-dist --optimize-autoloader
+
+      - name: Copiar arquivo de ambiente de testes
+        run: cp .env.example .env
+
+      - name: Configurar variáveis de ambiente para CI
+        run: |
+          echo "APP_KEY=" >> .env
+          echo "DB_CONNECTION=mysql" >> .env
+          echo "DB_HOST=127.0.0.1" >> .env
+          echo "DB_PORT=3306" >> .env
+          echo "DB_DATABASE=lucravendas_test" >> .env
+          echo "DB_USERNAME=lucravendas" >> .env
+          echo "DB_PASSWORD=secret" >> .env
+
+      - name: Gerar chave da aplicação
+        run: php artisan key:generate
+
+      - name: Executar migrations
+        run: php artisan migrate --force
+
+      - name: Executar testes Pest
+        run: vendor/bin/pest --ci --coverage-clover coverage.xml
+
+      - name: Publicar cobertura (Codecov)
+        if: always()
+        uses: codecov/codecov-action@v4
+        with:
+          files: coverage.xml
+          fail_ci_if_error: false
