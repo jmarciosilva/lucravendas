@@ -16,7 +16,7 @@
 
 ---
 
-## FASE 1 — Fundação do projeto
+## FASE 1 — Fundação do projeto `[x]`
 
 > Objetivo: projeto rodando localmente com autenticação, multi-tenancy e estrutura de módulos estabelecida.
 
@@ -30,7 +30,8 @@
 - [x] Criar estrutura de diretórios `app/Modules/` e `app/Shared/`
 - [x] Configurar `composer.json` com autoload dos módulos (`App\Modules\*`, `App\Shared\*`)
 - [x] Criar `routes/api.php` versionado (`/api/v1/`)
-- [x] Configurar GitHub Actions: lint + testes no push (`.github/workflows/ci.yml`)
+- [x] Configurar ambiente XAMPP para desenvolvimento local sem Docker (PHP 8.2.12 + MySQL)
+- [x] Adicionar `"platform": {"php": "8.2.12"}` no `composer.json` para garantir compatibilidade de pacotes
 
 ```bash
 # Pacotes instalados nesta fase
@@ -46,76 +47,102 @@ composer require pestphp/pest pestphp/pest-plugin-laravel --dev
 - [x] Publicar e configurar `config/tenancy.php`
 - [x] Definir modelo `Tenant` com campos: `id`, `name`, `slug`, `plan`, `status`, `data` (JSON)
 - [x] Criar migration da tabela central de tenants
-- [x] Configurar `TenancyServiceProvider` e bootstrappers (banco, cache, storage)
+- [x] Configurar `TenancyServiceProvider` e bootstrappers
 - [x] Implementar identificação por subdomínio E por header `X-Tenant-ID` (para API mobile)
 - [x] Criar comando Artisan `tenant:create {name} {slug} {--plan=free}`
-- [x] Testar isolamento de dados entre dois tenants distintos (12 testes unitários passando)
 
 ### 1.3 Autenticação
 
 - [x] Instalar e configurar Laravel Sanctum
 - [x] Criar migration de usuários com campos: `name`, `email`, `password`, `tenant_id`, `phone`, `status`
-- [x] Implementar `AuthController` com endpoints:
-  - `POST /api/v1/auth/register`
-  - `POST /api/v1/auth/login`
-  - `POST /api/v1/auth/logout`
-  - `GET  /api/v1/auth/me`
+- [x] Implementar `AuthController` com endpoints: register, login, logout, me
 - [x] Configurar Spatie Permissions com roles: `super_admin`, `tenant_admin`, `customer`
-- [x] Escrever testes de autenticação (register, login, token inválido, logout) — 9 testes passando
+- [x] Escrever testes de autenticação — 9 testes passando
 
 ### 1.4 Painel Admin — base
 
 - [x] Instalar Filament v3 e publicar assets
 - [x] Criar `AdminPanelProvider` com path `/admin`
-- [x] Criar usuário admin via seeder (`jmarciosilva@gmail.com`)
+- [x] Criar usuário admin via seeder (`jmarciosilva@gmail.com` / `12345678`)
 - [x] Criar `TenantResource` no Filament (CRUD básico de lojas)
 - [x] Criar `UserResource` no Filament (CRUD de usuários admin)
 - [x] Configurar acesso restrito ao painel admin (role `super_admin`, guard `web`)
 
 ---
 
-## FASE 2 — Catálogo de Produtos
+## FASE 2 — Catálogo de Produtos `[x]`
 
 > Objetivo: lojista consegue cadastrar produtos; frontend consegue listar e buscar.
 
 ### 2.1 Modelo de dados
 
-- [ ] Migration `categories` (`id`, `name`, `slug`, `parent_id`, `tenant_id`)
-- [ ] Migration `products` (`id`, `name`, `slug`, `description`, `price`, `compare_price`, `sku`, `stock`, `status`, `category_id`, `tenant_id`)
-- [ ] Migration `product_variants` (`id`, `product_id`, `name`, `sku`, `price`, `stock`, `attributes` JSON)
-- [ ] Migration `product_images` (via `spatie/laravel-medialibrary`)
-- [ ] Relacionamentos Eloquent entre Product, Category, Variant, Media
+- [x] Migration `categories` (`id`, `name`, `slug`, `parent_id`, `tenant_id`, `sort_order`, `is_active`)
+- [x] Migration `products` (`id`, `name`, `slug`, `description`, `price`, `compare_price`, `sku`, `stock`, `status`, `category_id`, `tenant_id`) com soft delete
+- [x] Migration `product_variants` (`id`, `product_id`, `name`, `sku`, `price`, `stock`, `attributes` JSON)
+- [x] Migration `product_images` (via `spatie/laravel-medialibrary` — tabela `media`)
+- [x] Relacionamentos Eloquent entre Product, Category, Variant, Media
 
-### 2.2 Instalar dependências
+### 2.2 Dependências instaladas
 
 ```bash
 composer require spatie/laravel-medialibrary
 composer require laravel/scout
 composer require meilisearch/meilisearch-php http-interop/http-factory-guzzle
+composer require filament/spatie-laravel-media-library-plugin:"^3.3"
 ```
 
 ### 2.3 API de catálogo
 
-- [ ] `GET  /api/v1/categories` — árvore de categorias do tenant
-- [ ] `GET  /api/v1/products` — listagem com filtros (categoria, preço, status), paginação
-- [ ] `GET  /api/v1/products/{slug}` — detalhe do produto com variantes e imagens
-- [ ] `GET  /api/v1/products/search?q=` — busca via Scout + Meilisearch
-- [ ] `POST /api/v1/products` — criar produto (autenticado, role `tenant_admin`)
-- [ ] `PUT  /api/v1/products/{id}` — atualizar produto
-- [ ] `DELETE /api/v1/products/{id}` — soft delete
-- [ ] `POST /api/v1/products/{id}/images` — upload de imagens
+- [x] `GET  /api/v1/categories` — árvore de categorias do tenant
+- [x] `GET  /api/v1/products` — listagem com filtros (categoria, preço, status), paginação
+- [x] `GET  /api/v1/products/{slug}` — detalhe do produto com variantes e imagens
+- [x] `GET  /api/v1/products/search?q=` — busca via Scout + Meilisearch
+- [x] `POST /api/v1/products` — criar produto (autenticado, role `tenant_admin`)
+- [x] `PUT  /api/v1/products/{id}` — atualizar produto
+- [x] `DELETE /api/v1/products/{id}` — soft delete
+- [x] `POST /api/v1/products/{id}/images` — upload de imagens
 
 ### 2.4 Admin — gestão de catálogo
 
-- [ ] `ProductResource` no Filament com form completo (nome, preço, imagens, variantes)
-- [ ] `CategoryResource` no Filament com suporte a hierarquia
-- [ ] Widget de estoque baixo no dashboard admin
+- [x] `ProductResource` no Filament com form completo (nome, preço, imagens, variantes)
+- [x] `CategoryResource` no Filament com suporte a hierarquia
+- [x] Widget de estoque baixo no dashboard admin (`LowStockWidget`)
 
-### 2.5 Testes
+### 2.5 Qualidade de código — controllers e handlers
 
-- [ ] Teste: criar produto via API e buscar pelo slug
-- [ ] Teste: busca retorna produto indexado no Meilisearch
-- [ ] Teste: produto de tenant A não aparece para tenant B
+- [x] `try/catch` em **todos** os métodos dos controllers (incluindo leitura) com mapeamento correto de HTTP status
+- [x] `catch (\Throwable)` como fallback para erros inesperados (retorna 500)
+- [x] `DB::transaction()` em todos os Use Case Handlers de escrita:
+  - `CreateCategoryHandler` — check de slug + create (evita race condition)
+  - `CreateProductHandler` — check de slug + create + dispatch de eventos
+  - `UpdateProductHandler` — find + save + dispatch de eventos
+  - `DeleteProductHandler` — find + delete
+  - `UploadProductImageHandler` — query + media upload
+  - `RegisterUserHandler` — create + assignRole + createToken (3 escritas em cascata)
+  - `LoginUserHandler` — createToken
+
+### 2.6 Importação de dados via planilha
+
+- [x] Publicar e rodar migrations do sistema de imports do Filament (`imports`, `failed_import_rows`, `exports`)
+- [x] `CategoryImporter` — importa categorias com suporte a hierarquia via `parent_slug`
+- [x] `ProductImporter` — importa produtos com conversão automática de preços (reais → centavos)
+- [x] `UserImporter` — importa usuários com atribuição de role via Spatie Permission
+- [x] Botão **"Importar Planilha"** nas páginas: ListCategories, ListProducts, ListUsers
+- [x] Seletor de tenant (loja) no formulário de upload
+- [x] Relatório de erros por linha — importação parcial (linhas válidas são salvas mesmo com erros em outras)
+- [x] Botão **"Baixar modelo CSV"** automático com as colunas corretas
+
+### 2.7 Melhorias no painel admin
+
+- [x] Campo `phone` no `UserResource` com máscara `(99)99999-9999`
+- [x] Campo `name` no `UserResource` com formatação automática em Title Case (respeita conectores "da", "de", "do", "dos", "das")
+- [x] Correção de conflito de ícones em grupos de navegação do Filament (grupos sem ícone, itens com ícone)
+
+### 2.8 Testes
+
+- [x] Teste: criar produto via API e buscar pelo slug
+- [x] Teste: produto de tenant A não aparece para tenant B
+- [x] Teste: busca retorna produto indexado (Scout desabilitado nos testes com `SCOUT_DRIVER=null`)
 
 ---
 
@@ -143,17 +170,13 @@ composer require meilisearch/meilisearch-php http-interop/http-factory-guzzle
 
 ### 3.3 API de checkout
 
-- [ ] `POST /api/v1/checkout` — criar pedido a partir do carrinho
-  - Validar estoque
-  - Calcular totais (subtotal + frete + desconto)
-  - Reservar estoque
-  - Retornar `order_id` e dados de pagamento
+- [ ] `POST /api/v1/checkout` — criar pedido a partir do carrinho (validar estoque, calcular totais, reservar estoque)
 - [ ] `GET  /api/v1/orders` — histórico de pedidos do cliente
 - [ ] `GET  /api/v1/orders/{id}` — detalhe do pedido
 
 ### 3.4 Jobs e eventos
 
-- [ ] `OrderCreated` event → dispara `SendOrderConfirmationEmail` job
+- [ ] `OrderCreated` event → dispara `SendOrderConfirmationEmail`
 - [ ] `StockReserved` event → reduz estoque
 - [ ] Job de expiração de carrinhos abandonados (>24h)
 
@@ -161,7 +184,7 @@ composer require meilisearch/meilisearch-php http-interop/http-factory-guzzle
 
 - [ ] Teste: fluxo completo add-to-cart → checkout → pedido criado
 - [ ] Teste: checkout falha quando produto sem estoque
-- [ ] Teste: cupom inválido retorna erro 422
+- [ ] Teste: cupom inválido retorna 422
 
 ---
 
@@ -173,27 +196,25 @@ composer require meilisearch/meilisearch-php http-interop/http-factory-guzzle
 
 - [ ] Criar interface `PaymentGateway` com métodos: `createCharge`, `refund`, `getStatus`
 - [ ] Migration `payment_transactions` (`order_id`, `gateway`, `gateway_id`, `method`, `amount`, `status`, `payload` JSON)
-- [ ] Configurar `config/payments.php` com lista de gateways e credenciais
+- [ ] Configurar `config/payments.php`
 
 ### 4.2 Integração EFI / Gerencianet (PIX prioritário)
 
-- [ ] Instalar SDK: `composer require efi-pay/efi-pay-php`
+- [ ] `composer require efi-pay/efi-pay-php`
 - [ ] Implementar `EfiGateway` com geração de QR Code PIX
-- [ ] Endpoint `POST /api/v1/payments/pix` — gerar cobrança PIX
-- [ ] Webhook `POST /api/v1/webhooks/efi` — receber notificação de pagamento
-- [ ] Processar webhook: atualizar status do pedido, liberar acesso ao produto
+- [ ] `POST /api/v1/payments/pix` — gerar cobrança PIX
+- [ ] `POST /api/v1/webhooks/efi` — processar notificação de pagamento
 
 ### 4.3 Integração Stripe (cartão de crédito)
 
-- [ ] Instalar SDK: `composer require stripe/stripe-php`
+- [ ] `composer require stripe/stripe-php`
 - [ ] Implementar `StripeGateway` com Payment Intents
-- [ ] Endpoint `POST /api/v1/payments/card` — criar payment intent
-- [ ] Webhook `POST /api/v1/webhooks/stripe` — confirmação de pagamento
-- [ ] Suporte a parcelamento (metadata)
+- [ ] `POST /api/v1/payments/card` — criar payment intent
+- [ ] `POST /api/v1/webhooks/stripe` — confirmação de pagamento
 
 ### 4.4 Testes
 
-- [ ] Teste com ambiente sandbox de cada gateway
+- [ ] Teste com sandbox de cada gateway
 - [ ] Teste: webhook inválido (assinatura errada) retorna 401
 - [ ] Teste: pedido atualiza para `paid` após webhook de sucesso
 
@@ -206,7 +227,6 @@ composer require meilisearch/meilisearch-php http-interop/http-factory-guzzle
 ### 5.1 Modelo de dados
 
 - [ ] Migration `sellers` (`id`, `name`, `slug`, `tenant_id`, `commission_rate`, `status`, `bank_info` JSON)
-- [ ] Relacionar `products` com `sellers` (um produto pertence a um seller)
 - [ ] Migration `commissions` (`order_item_id`, `seller_id`, `gross_amount`, `commission_amount`, `net_amount`, `status`)
 - [ ] Migration `payouts` (`seller_id`, `amount`, `status`, `paid_at`, `gateway_response` JSON)
 
@@ -217,86 +237,64 @@ composer require meilisearch/meilisearch-php http-interop/http-factory-guzzle
 - [ ] `GET  /api/v1/marketplace/sellers/{slug}/products` — produtos do seller
 - [ ] `POST /api/v1/sellers/register` — cadastro de novo seller
 - [ ] `GET  /api/v1/seller/dashboard` — métricas do seller autenticado
-- [ ] `GET  /api/v1/seller/orders` — pedidos do seller
-- [ ] `GET  /api/v1/seller/commissions` — extrato de comissões
 
 ### 5.3 Cálculo de comissões
 
-- [ ] Service `CommissionCalculator` — calcula comissão no momento do pedido
-- [ ] Job `ProcessPayout` — gerar repasse para sellers (execução semanal via Schedule)
-- [ ] Integração com gateway para split de pagamento (Stripe Connect ou EFI Split)
+- [ ] Service `CommissionCalculator`
+- [ ] Job `ProcessPayout` — repasse para sellers (semanal via Schedule)
+- [ ] Split de pagamento (Stripe Connect ou EFI Split)
 
-### 5.4 Admin — gestão do marketplace
+### 5.4 Admin
 
 - [ ] `SellerResource` no Filament (aprovar/suspender sellers)
-- [ ] `CommissionResource` — extrato e ajustes manuais
-- [ ] `PayoutResource` — controle de repasses (aprovar, marcar como pago)
-- [ ] Widget: GMV do marketplace, top sellers, comissão acumulada
-
-### 5.5 Testes
-
-- [ ] Teste: produto de seller A não pode ser editado por seller B
-- [ ] Teste: comissão calculada corretamente ao criar pedido
-- [ ] Teste: payout gerado somente para comissões com status `settled`
+- [ ] `CommissionResource` e `PayoutResource`
+- [ ] Widget: GMV, top sellers, comissão acumulada
 
 ---
 
 ## FASE 6 — Frete e Logística
 
-> Objetivo: calcular e exibir opções de frete no checkout.
-
-- [ ] Migration `shipping_zones` e `shipping_rates` (regras por CEP/estado/peso)
-- [ ] Integração com Correios (API Melhor Envio ou direta)
-- [ ] `GET /api/v1/shipping/calculate` — calcular opções de frete (CEP destino + itens)
-- [ ] Gerar etiqueta de envio pós-pagamento
-- [ ] Tracking de pedido via webhook do transportador
-- [ ] Configuração de frete grátis por valor mínimo de pedido (por tenant)
+- [ ] Migration `shipping_zones` e `shipping_rates`
+- [ ] Integração com Correios / Melhor Envio
+- [ ] `GET /api/v1/shipping/calculate` — opções de frete
+- [ ] Geração de etiqueta pós-pagamento
+- [ ] Tracking via webhook do transportador
+- [ ] Frete grátis por valor mínimo por tenant
 
 ---
 
 ## FASE 7 — LucraMarketing Nativo
 
-> Objetivo: todo cliente LucraVendas tem marketing automático sem configuração extra.
-
-- [ ] Migration `social_accounts` (OAuth com Instagram, Facebook)
-- [ ] Migration `scheduled_posts` (`tenant_id`, `content`, `image_url`, `scheduled_at`, `status`, `platform`)
-- [ ] Integração com Meta Graph API (publicação em Instagram/Facebook)
-- [ ] Job `PublishScheduledPost` (executado a cada hora via Schedule)
-- [ ] Geração automática de post ao publicar produto novo (via `ProductCreated` event)
-- [ ] Templates de post por categoria de negócio
-- [ ] `GET  /api/v1/marketing/posts` — histórico de posts
+- [ ] Migration `social_accounts` (OAuth Instagram/Facebook)
+- [ ] Migration `scheduled_posts`
+- [ ] Integração com Meta Graph API
+- [ ] Job `PublishScheduledPost` (a cada hora via Schedule)
+- [ ] Geração automática de post ao publicar produto (`ProductCreated` event)
 - [ ] `POST /api/v1/marketing/posts` — agendar post manual
-- [ ] Admin: relatório de alcance por tenant
 
 ---
 
 ## FASE 8 — Observabilidade e Performance
 
-> Objetivo: sistema pronto para produção com monitoramento real.
-
-- [ ] Instalar e configurar Sentry para rastreamento de erros
-- [ ] Configurar Laravel Telescope (ambiente de staging)
-- [ ] Configurar Laravel Horizon com métricas de filas no painel admin
-- [ ] Implementar rate limiting na API (throttle por IP e por token)
-- [ ] Adicionar cache em endpoints pesados (catálogo, categorias) com Redis
-- [ ] Configurar índices de banco de dados (tenant_id, slug, status, created_at)
-- [ ] Load testing básico com k6 ou Artillery
-- [ ] Configurar backup automático do banco (S3 via `spatie/laravel-backup`)
+- [ ] Sentry para rastreamento de erros
+- [ ] Laravel Telescope (staging)
+- [ ] Laravel Horizon com métricas de filas no painel admin
+- [ ] Rate limiting na API (por IP e por token)
+- [ ] Cache em endpoints pesados com Redis
+- [ ] Load testing com k6 ou Artillery
+- [ ] Backup automático do banco (`spatie/laravel-backup`)
 
 ---
 
 ## FASE 9 — Go-live e Infraestrutura
 
-> Objetivo: deploy seguro em produção.
-
 - [ ] Configurar servidor (AWS EC2 / Hetzner VPS)
-- [ ] Configurar Nginx + SSL (Let's Encrypt via Certbot)
-- [ ] Configurar Laravel Octane (Swoole ou RoadRunner) para performance
-- [ ] Workflow de deploy zero-downtime no GitHub Actions
-- [ ] Configurar domínios wildcard para tenants (`*.lucravendas.com.br`)
-- [ ] Checklist de segurança: CORS, HTTPS-only, secrets no Vault/SSM, headers HTTP
-- [ ] Criar runbook de operações (restart, rollback, migrations em prod)
-- [ ] Configurar alertas de uptime (Better Uptime ou HetrixTools)
+- [ ] Nginx + SSL (Let's Encrypt)
+- [ ] Laravel Octane (Swoole ou RoadRunner)
+- [ ] Deploy zero-downtime via GitHub Actions
+- [ ] Domínios wildcard para tenants (`*.lucravendas.com.br`)
+- [ ] Checklist de segurança: CORS, HTTPS-only, secrets no Vault/SSM
+- [ ] Alertas de uptime
 
 ---
 
@@ -306,18 +304,16 @@ composer require meilisearch/meilisearch-php http-interop/http-factory-guzzle
 |---|---|---|
 | Gateway de pagamento principal | EFI vs Stripe vs Pagar.me | Fase 4 |
 | Split de pagamento marketplace | Stripe Connect vs EFI Split vs manual | Fase 5 |
-| Identificação de tenants na API mobile | Subdomínio vs Header `X-Tenant-ID` | Fase 1 |
-| Isolamento de tenants | Banco separado vs schema vs coluna | Fase 1 |
 | Servidor de produção | AWS vs Hetzner | Fase 9 |
 
 ---
 
 ## Referências
 
-- [Laravel 11 Docs](https://laravel.com/docs/11.x)
+- [Laravel 12 Docs](https://laravel.com/docs/12.x)
 - [stancl/tenancy](https://tenancyforlaravel.com)
 - [Filament v3](https://filamentphp.com/docs)
 - [spatie/laravel-permission](https://spatie.be/docs/laravel-permission)
 - [spatie/laravel-medialibrary](https://spatie.be/docs/laravel-medialibrary)
-- [Laravel Scout](https://laravel.com/docs/11.x/scout)
+- [Laravel Scout](https://laravel.com/docs/12.x/scout)
 - [EFI Pay SDK PHP](https://github.com/efipay/sdk-php-apis-efi)

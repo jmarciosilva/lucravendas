@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Modules\Tenant\Application\UseCases\RegisterUser;
 
 use App\Models\User;
+use Illuminate\Support\Facades\DB;
 use RuntimeException;
 
 /**
@@ -17,29 +18,32 @@ final class RegisterUserHandler
 {
     public function handle(RegisterUserCommand $command): RegisterUserOutput
     {
-        if (User::where('email', $command->email)->exists()) {
-            throw new RuntimeException('Este e-mail já está cadastrado.');
-        }
+        return DB::transaction(function () use ($command) {
+            // Verificação dentro da transação para evitar race condition de e-mail duplicado
+            if (User::where('email', $command->email)->exists()) {
+                throw new RuntimeException('Este e-mail já está cadastrado.');
+            }
 
-        $user = User::create([
-            'name'      => $command->name,
-            'email'     => $command->email,
-            'password'  => $command->password,
-            'phone'     => $command->phone,
-            'tenant_id' => $command->tenantId,
-            'status'    => 'active',
-        ]);
+            $user = User::create([
+                'name'      => $command->name,
+                'email'     => $command->email,
+                'password'  => $command->password,
+                'phone'     => $command->phone,
+                'tenant_id' => $command->tenantId,
+                'status'    => 'active',
+            ]);
 
-        $user->assignRole($command->role);
+            $user->assignRole($command->role);
 
-        $token = $user->createToken('api')->plainTextToken;
+            $token = $user->createToken('api')->plainTextToken;
 
-        return new RegisterUserOutput(
-            id: $user->id,
-            name: $user->name,
-            email: $user->email,
-            role: $command->role,
-            token: $token,
-        );
+            return new RegisterUserOutput(
+                id: $user->id,
+                name: $user->name,
+                email: $user->email,
+                role: $command->role,
+                token: $token,
+            );
+        });
     }
 }

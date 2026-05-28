@@ -13,9 +13,14 @@
     "require": {
         "php": "^8.2",
         "filament/filament": "3.3",
+        "filament/spatie-laravel-media-library-plugin": "^3.3",
+        "http-interop/http-factory-guzzle": "^1.2",
         "laravel/framework": "^12.0",
         "laravel/sanctum": "^4.3",
+        "laravel/scout": "^11.2",
         "laravel/tinker": "^2.10.1",
+        "meilisearch/meilisearch-php": "^1.16",
+        "spatie/laravel-medialibrary": "^11.23",
         "spatie/laravel-permission": "^6.25",
         "stancl/tenancy": "^3.10"
     },
@@ -93,6 +98,9 @@
         "optimize-autoloader": true,
         "preferred-install": "dist",
         "sort-packages": true,
+        "platform": {
+            "php": "8.2.12"
+        },
         "allow-plugins": {
             "pestphp/pest-plugin": true,
             "php-http/discovery": true

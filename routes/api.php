@@ -31,14 +31,43 @@ Route::prefix('v1')->name('api.v1.')->group(function (): void {
         });
     });
 
-    // ─── Rotas protegidas por autenticação Sanctum ────────────────────────────
+    // ─── Catálogo — rotas públicas (leitura sem autenticação) ────────────────
+    Route::prefix('categories')->name('categories.')->group(function (): void {
+        Route::get('/', [\App\Modules\Catalog\Presentation\Controllers\CategoryController::class, 'index'])
+            ->name('index');
+    });
+
+    Route::prefix('products')->name('products.')->group(function (): void {
+        Route::get('/', [\App\Modules\Catalog\Presentation\Controllers\ProductController::class, 'index'])
+            ->name('index');
+        // A rota de busca deve vir antes de {slug} para não ser capturada como parâmetro
+        Route::get('/search', [\App\Modules\Catalog\Presentation\Controllers\ProductController::class, 'search'])
+            ->name('search');
+        Route::get('/{slug}', [\App\Modules\Catalog\Presentation\Controllers\ProductController::class, 'show'])
+            ->name('show');
+    });
+
+    // ─── Catálogo e demais recursos — rotas protegidas ────────────────────────
     Route::middleware('auth:sanctum')->group(function (): void {
 
-        // Catálogo — disponível em breve (Fase 2)
-        // Route::apiResource('products', ProductController::class);
-        // Route::apiResource('categories', CategoryController::class);
+        // ─── Catálogo — escrita (requer tenant_admin) ─────────────────────────
+        Route::prefix('categories')->name('categories.')->group(function (): void {
+            Route::post('/', [\App\Modules\Catalog\Presentation\Controllers\CategoryController::class, 'store'])
+                ->name('store');
+        });
 
-        // Carrinho e Checkout — disponível em breve (Fase 3)
+        Route::prefix('products')->name('products.')->group(function (): void {
+            Route::post('/', [\App\Modules\Catalog\Presentation\Controllers\ProductController::class, 'store'])
+                ->name('store');
+            Route::put('/{id}', [\App\Modules\Catalog\Presentation\Controllers\ProductController::class, 'update'])
+                ->name('update');
+            Route::delete('/{id}', [\App\Modules\Catalog\Presentation\Controllers\ProductController::class, 'destroy'])
+                ->name('destroy');
+            Route::post('/{id}/images', [\App\Modules\Catalog\Presentation\Controllers\ProductImageController::class, 'store'])
+                ->name('images.store');
+        });
+
+        // ─── Carrinho e Checkout — disponível em breve (Fase 3) ──────────────
         // Route::apiResource('cart/items', CartItemController::class);
         // Route::post('checkout', CheckoutController::class);
 

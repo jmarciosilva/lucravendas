@@ -54,6 +54,8 @@ final class AuthController extends Controller
                 ->setStatusCode(201);
         } catch (RuntimeException $e) {
             return response()->json(['message' => $e->getMessage()], 422);
+        } catch (\Throwable $e) {
+            return response()->json(['message' => 'Erro ao registrar usuário.'], 500);
         }
     }
 
@@ -76,6 +78,8 @@ final class AuthController extends Controller
                 ->response();
         } catch (AuthenticationException $e) {
             return response()->json(['message' => $e->getMessage()], 401);
+        } catch (\Throwable $e) {
+            return response()->json(['message' => 'Erro ao realizar login.'], 500);
         }
     }
 
@@ -84,16 +88,24 @@ final class AuthController extends Controller
      */
     public function logout(Request $request): JsonResponse
     {
-        $request->user()->currentAccessToken()->delete();
+        try {
+            $request->user()->currentAccessToken()->delete();
 
-        return response()->json(['message' => 'Logout realizado com sucesso.']);
+            return response()->json(['message' => 'Logout realizado com sucesso.']);
+        } catch (\Throwable $e) {
+            return response()->json(['message' => 'Erro ao realizar logout.'], 500);
+        }
     }
 
     /**
      * Retorna os dados do usuário autenticado.
      */
-    public function me(Request $request): UserResource
+    public function me(Request $request): JsonResponse
     {
-        return new UserResource($request->user());
+        try {
+            return response()->json(['data' => new UserResource($request->user())]);
+        } catch (\Throwable $e) {
+            return response()->json(['message' => 'Erro ao buscar dados do usuário.'], 500);
+        }
     }
 }

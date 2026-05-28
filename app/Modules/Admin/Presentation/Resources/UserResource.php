@@ -11,6 +11,7 @@ use App\Modules\Admin\Presentation\Resources\UserResource\Pages\ListUsers;
 use Filament\Forms\Components\Select;
 use Filament\Forms\Components\TextInput;
 use Filament\Forms\Form;
+use Filament\Forms\Set;
 use Filament\Resources\Resource;
 use Filament\Tables\Actions\BulkActionGroup;
 use Filament\Tables\Actions\DeleteBulkAction;
@@ -40,13 +41,45 @@ class UserResource extends Resource
 
     protected static ?int $navigationSort = 2;
 
+    /**
+     * Formata o nome em Title Case respeitando conectores portugueses em minúsculo.
+     * Ex.: "JOSÉ DA SILVA" → "José da Silva"
+     */
+    private static function formatName(string $name): string
+    {
+        // Conectores que permanecem em minúsculo exceto na primeira posição
+        $lowercase = ['da', 'de', 'do', 'das', 'dos', 'e', 'em', 'na', 'no', 'nas', 'nos'];
+
+        $words = explode(' ', mb_strtolower(trim($name)));
+
+        foreach ($words as $i => &$word) {
+            if ($word === '') {
+                continue;
+            }
+
+            if ($i === 0 || ! in_array($word, $lowercase, true)) {
+                $word = mb_strtoupper(mb_substr($word, 0, 1)) . mb_substr($word, 1);
+            }
+        }
+
+        return implode(' ', array_filter($words, fn ($w) => $w !== ''));
+    }
+
     public static function form(Form $form): Form
     {
         return $form->schema([
             TextInput::make('name')
                 ->label('Nome')
                 ->required()
-                ->maxLength(255),
+                ->maxLength(255)
+                // Formata para Title Case ao sair do campo
+                ->live(onBlur: true)
+                ->afterStateUpdated(fn (Set $set, ?string $state) => $set(
+                    'name',
+                    filled($state) ? self::formatName($state) : $state
+                ))
+                // Garante Title Case mesmo que o usuário nunca saia do campo
+                ->dehydrateStateUsing(fn (?string $state) => filled($state) ? self::formatName($state) : $state),
 
             TextInput::make('email')
                 ->label('E-mail')
@@ -65,7 +98,9 @@ class UserResource extends Resource
 
             TextInput::make('phone')
                 ->label('Telefone')
-                ->maxLength(20)
+                ->mask('(99)99999-9999')
+                ->placeholder('(11)99999-9999')
+                ->maxLength(14)
                 ->nullable(),
 
             Select::make('roles')

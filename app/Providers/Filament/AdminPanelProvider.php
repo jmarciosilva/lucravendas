@@ -61,8 +61,9 @@ class AdminPanelProvider extends PanelProvider
                 Widgets\AccountWidget::class,
             ])
             ->navigationGroups([
-                NavigationGroup::make('Plataforma')->icon('heroicon-o-building-storefront'),
-                NavigationGroup::make('Usuários')->icon('heroicon-o-users'),
+                NavigationGroup::make('Catálogo'),
+                NavigationGroup::make('Plataforma'),
+                NavigationGroup::make('Usuários'),
             ])
             ->middleware([
                 EncryptCookies::class,
