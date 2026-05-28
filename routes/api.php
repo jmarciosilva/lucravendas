@@ -93,6 +93,14 @@ Route::prefix('v1')->name('api.v1.')->group(function (): void {
             ->name('status');
     });
 
+    // ─── Frete — cálculo público (carrinho anônimo ou autenticado) ──────────
+    Route::get('/shipping/calculate', [\App\Modules\Shipping\Presentation\Controllers\ShippingController::class, 'calculate'])
+        ->name('shipping.calculate');
+
+    // ─── Webhook de rastreio do Melhor Envio (sem autenticação) ─────────────
+    Route::post('/webhooks/shipping', \App\Modules\Shipping\Presentation\Controllers\TrackingWebhookController::class)
+        ->name('webhooks.shipping');
+
     // ─── Webhook Mercado Pago (sem autenticação — chamado pelos servidores do MP)
     Route::post('/webhooks/mercadopago', [\App\Modules\Payments\Presentation\Controllers\WebhookController::class, 'mercadopago'])
         ->name('webhooks.mercadopago');

@@ -20,6 +20,11 @@ class OrderModel extends Model
         'tenant_id', 'user_id', 'status', 'subtotal', 'discount',
         'shipping_cost', 'total', 'payment_method', 'payment_status',
         'coupon_id', 'notes',
+        // Endereço de entrega
+        'recipient_name', 'recipient_zipcode', 'recipient_address',
+        'recipient_number', 'recipient_complement', 'recipient_city', 'recipient_state',
+        // Frete e rastreio
+        'shipping_service_code', 'tracking_code', 'tracking_status', 'shipping_label_url',
     ];
 
     protected $casts = [

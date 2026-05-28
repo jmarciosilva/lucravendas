@@ -13,23 +13,33 @@ use App\Modules\Orders\Domain\ValueObjects\PaymentStatus;
 use App\Modules\Orders\Infrastructure\Models\OrderItemModel;
 use App\Modules\Orders\Infrastructure\Models\OrderModel;
 use App\Modules\Orders\Infrastructure\Models\OrderStatusHistoryModel;
+use App\Modules\Shipping\Domain\ValueObjects\ShippingAddress;
 
 class EloquentOrderRepository implements OrderRepositoryInterface
 {
     public function save(Order $order): Order
     {
+        $addr  = $order->shippingAddress();
         $model = OrderModel::create([
-            'tenant_id'      => $order->tenantId(),
-            'user_id'        => $order->userId(),
-            'status'         => $order->status()->value(),
-            'subtotal'       => $order->subtotal()->centavos(),
-            'discount'       => $order->discount()->centavos(),
-            'shipping_cost'  => $order->shippingCost()->centavos(),
-            'total'          => $order->total()->centavos(),
-            'payment_method' => $order->paymentMethod(),
-            'payment_status' => $order->paymentStatus()->value(),
-            'coupon_id'      => $order->couponId(),
-            'notes'          => $order->notes(),
+            'tenant_id'             => $order->tenantId(),
+            'user_id'               => $order->userId(),
+            'status'                => $order->status()->value(),
+            'subtotal'              => $order->subtotal()->centavos(),
+            'discount'              => $order->discount()->centavos(),
+            'shipping_cost'         => $order->shippingCost()->centavos(),
+            'total'                 => $order->total()->centavos(),
+            'payment_method'        => $order->paymentMethod(),
+            'payment_status'        => $order->paymentStatus()->value(),
+            'coupon_id'             => $order->couponId(),
+            'notes'                 => $order->notes(),
+            'shipping_service_code' => $order->shippingServiceCode(),
+            'recipient_name'        => $addr?->recipientName,
+            'recipient_zipcode'     => $addr?->zipcode,
+            'recipient_address'     => $addr?->address,
+            'recipient_number'      => $addr?->number,
+            'recipient_complement'  => $addr?->complement,
+            'recipient_city'        => $addr?->city,
+            'recipient_state'       => $addr?->state,
         ]);
 
         foreach ($order->items() as $item) {
@@ -93,6 +103,27 @@ class EloquentOrderRepository implements OrderRepositoryInterface
             ->all();
     }
 
+    public function findByTrackingCode(string $trackingCode): ?Order
+    {
+        $model = OrderModel::with('items')->where('tracking_code', $trackingCode)->first();
+
+        return $model ? $this->toDomain($model) : null;
+    }
+
+    public function updateTracking(int $orderId, string $trackingCode, string $trackingStatus, ?string $labelUrl): void
+    {
+        $data = [
+            'tracking_code'   => $trackingCode,
+            'tracking_status' => $trackingStatus,
+        ];
+
+        if ($labelUrl !== null) {
+            $data['shipping_label_url'] = $labelUrl;
+        }
+
+        OrderModel::where('id', $orderId)->update($data);
+    }
+
     private function toDomain(OrderModel $model): Order
     {
         $items = $model->items->map(fn (OrderItemModel $i) => OrderItem::create(
@@ -104,6 +135,20 @@ class EloquentOrderRepository implements OrderRepositoryInterface
             unitPrice: Money::fromCentavos($i->unit_price),
             quantity: $i->quantity,
         ))->all();
+
+        // Reconstrói o endereço de entrega se os dados estiverem presentes
+        $shippingAddress = null;
+        if ($model->recipient_name && $model->recipient_zipcode && $model->recipient_state) {
+            $shippingAddress = new ShippingAddress(
+                recipientName: $model->recipient_name,
+                zipcode: $model->recipient_zipcode,
+                address: $model->recipient_address ?? '',
+                number: $model->recipient_number ?? 's/n',
+                complement: $model->recipient_complement,
+                city: $model->recipient_city ?? '',
+                state: $model->recipient_state,
+            );
+        }
 
         return Order::restore(
             id: $model->id,
@@ -119,6 +164,11 @@ class EloquentOrderRepository implements OrderRepositoryInterface
             paymentMethod: $model->payment_method,
             notes: $model->notes,
             items: $items,
+            shippingAddress: $shippingAddress,
+            shippingServiceCode: $model->shipping_service_code,
+            trackingCode: $model->tracking_code,
+            trackingStatus: $model->tracking_status,
+            shippingLabelUrl: $model->shipping_label_url,
         );
     }
 }

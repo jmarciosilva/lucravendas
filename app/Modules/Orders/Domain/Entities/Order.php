@@ -8,6 +8,7 @@ use App\Modules\Catalog\Domain\ValueObjects\Money;
 use App\Modules\Orders\Domain\Events\OrderCreated;
 use App\Modules\Orders\Domain\ValueObjects\OrderStatus;
 use App\Modules\Orders\Domain\ValueObjects\PaymentStatus;
+use App\Modules\Shipping\Domain\ValueObjects\ShippingAddress;
 
 final class Order
 {
@@ -15,31 +16,38 @@ final class Order
 
     /** @param OrderItem[] $items */
     private function __construct(
-        private readonly ?int         $id,
-        private readonly string       $tenantId,
-        private readonly int          $userId,
-        private OrderStatus           $status,
-        private readonly Money        $subtotal,
-        private readonly Money        $discount,
-        private readonly Money        $shippingCost,
-        private readonly Money        $total,
-        private PaymentStatus         $paymentStatus,
-        private readonly ?int         $couponId,
-        private readonly ?string      $paymentMethod,
-        private readonly ?string      $notes,
-        private readonly array        $items,
+        private readonly ?int              $id,
+        private readonly string            $tenantId,
+        private readonly int               $userId,
+        private OrderStatus                $status,
+        private readonly Money             $subtotal,
+        private readonly Money             $discount,
+        private readonly Money             $shippingCost,
+        private readonly Money             $total,
+        private PaymentStatus              $paymentStatus,
+        private readonly ?int              $couponId,
+        private readonly ?string           $paymentMethod,
+        private readonly ?string           $notes,
+        private readonly array             $items,
+        private readonly ?ShippingAddress  $shippingAddress,
+        private readonly ?string           $shippingServiceCode,
+        private ?string                    $trackingCode,
+        private ?string                    $trackingStatus,
+        private ?string                    $shippingLabelUrl,
     ) {}
 
     public static function create(
-        string  $tenantId,
-        int     $userId,
-        Money   $subtotal,
-        Money   $discount,
-        Money   $shippingCost,
-        ?int    $couponId,
-        ?string $paymentMethod,
-        ?string $notes,
-        array   $items,
+        string          $tenantId,
+        int             $userId,
+        Money           $subtotal,
+        Money           $discount,
+        Money           $shippingCost,
+        ?int            $couponId,
+        ?string         $paymentMethod,
+        ?string         $notes,
+        array           $items,
+        ?ShippingAddress $shippingAddress = null,
+        ?string         $shippingServiceCode = null,
     ): self {
         $total = Money::fromCentavos(
             $subtotal->centavos() - $discount->centavos() + $shippingCost->centavos()
@@ -59,6 +67,11 @@ final class Order
             paymentMethod: $paymentMethod,
             notes: $notes,
             items: $items,
+            shippingAddress: $shippingAddress,
+            shippingServiceCode: $shippingServiceCode,
+            trackingCode: null,
+            trackingStatus: null,
+            shippingLabelUrl: null,
         );
 
         return $order;
@@ -66,24 +79,40 @@ final class Order
 
     /** @param OrderItem[] $items */
     public static function restore(
-        int           $id,
-        string        $tenantId,
-        int           $userId,
-        OrderStatus   $status,
-        Money         $subtotal,
-        Money         $discount,
-        Money         $shippingCost,
-        Money         $total,
-        PaymentStatus $paymentStatus,
-        ?int          $couponId,
-        ?string       $paymentMethod,
-        ?string       $notes,
-        array         $items,
+        int              $id,
+        string           $tenantId,
+        int              $userId,
+        OrderStatus      $status,
+        Money            $subtotal,
+        Money            $discount,
+        Money            $shippingCost,
+        Money            $total,
+        PaymentStatus    $paymentStatus,
+        ?int             $couponId,
+        ?string          $paymentMethod,
+        ?string          $notes,
+        array            $items,
+        ?ShippingAddress $shippingAddress = null,
+        ?string          $shippingServiceCode = null,
+        ?string          $trackingCode = null,
+        ?string          $trackingStatus = null,
+        ?string          $shippingLabelUrl = null,
     ): self {
         return new self(
-            $id, $tenantId, $userId, $status, $subtotal, $discount,
-            $shippingCost, $total, $paymentStatus, $couponId, $paymentMethod, $notes, $items
+            $id, $tenantId, $userId, $status, $subtotal, $discount, $shippingCost,
+            $total, $paymentStatus, $couponId, $paymentMethod, $notes, $items,
+            $shippingAddress, $shippingServiceCode, $trackingCode, $trackingStatus, $shippingLabelUrl,
         );
+    }
+
+    /** Atualiza dados de rastreio e URL da etiqueta */
+    public function updateTracking(string $code, string $status, ?string $labelUrl): void
+    {
+        $this->trackingCode     = $code;
+        $this->trackingStatus   = $status;
+        if ($labelUrl !== null) {
+            $this->shippingLabelUrl = $labelUrl;
+        }
     }
 
     public function recordCreatedEvent(): void
@@ -169,6 +198,11 @@ final class Order
     public function couponId(): ?int        { return $this->couponId; }
     public function paymentMethod(): ?string { return $this->paymentMethod; }
     public function notes(): ?string        { return $this->notes; }
+    public function shippingAddress(): ?ShippingAddress { return $this->shippingAddress; }
+    public function shippingServiceCode(): ?string { return $this->shippingServiceCode; }
+    public function trackingCode(): ?string { return $this->trackingCode; }
+    public function trackingStatus(): ?string { return $this->trackingStatus; }
+    public function shippingLabelUrl(): ?string { return $this->shippingLabelUrl; }
 
     /** @return OrderItem[] */
     public function items(): array          { return $this->items; }

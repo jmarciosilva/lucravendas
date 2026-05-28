@@ -24,6 +24,16 @@ use App\Modules\Marketplace\Application\UseCases\ProcessPayout\ProcessPayoutHand
 use App\Modules\Marketplace\Application\UseCases\RegisterSeller\RegisterSellerHandler;
 use App\Modules\Marketplace\Application\UseCases\SuspendSeller\SuspendSellerHandler;
 use App\Modules\Marketplace\Domain\Repositories\CommissionRepositoryInterface;
+use App\Modules\Shipping\Application\Services\InternalRateCalculator;
+use App\Modules\Shipping\Application\UseCases\CalculateShipping\CalculateShippingHandler;
+use App\Modules\Shipping\Application\UseCases\GenerateLabel\GenerateLabelHandler;
+use App\Modules\Shipping\Application\UseCases\ProcessTrackingWebhook\ProcessTrackingWebhookHandler;
+use App\Modules\Shipping\Domain\Contracts\ShippingGatewayInterface;
+use App\Modules\Shipping\Domain\Repositories\ShippingRateRepositoryInterface;
+use App\Modules\Shipping\Domain\Repositories\ShippingZoneRepositoryInterface;
+use App\Modules\Shipping\Infrastructure\Gateways\MelhorEnvioGateway;
+use App\Modules\Shipping\Infrastructure\Repositories\EloquentShippingRateRepository;
+use App\Modules\Shipping\Infrastructure\Repositories\EloquentShippingZoneRepository;
 use App\Modules\Marketplace\Domain\Repositories\PayoutRepositoryInterface;
 use App\Modules\Marketplace\Domain\Repositories\SellerRepositoryInterface;
 use App\Modules\Marketplace\Infrastructure\Repositories\EloquentCommissionRepository;
@@ -88,6 +98,10 @@ final class AppServiceProvider extends ServiceProvider
         $this->app->bind(CartRepositoryInterface::class, EloquentCartRepository::class);
         $this->app->bind(OrderRepositoryInterface::class, EloquentOrderRepository::class);
 
+        // ─── Módulo Orders — binding explícito do CheckoutHandler com suas dependências ─
+        // O CheckoutHandler agora depende de ShippingRateRepositoryInterface
+        $this->app->bind(CheckoutHandler::class, CheckoutHandler::class);
+
         // ─── Módulo Orders — handlers de Use Cases ────────────────────────────
         $this->app->bind(GetCartHandler::class, GetCartHandler::class);
         $this->app->bind(AddCartItemHandler::class, AddCartItemHandler::class);
@@ -123,6 +137,17 @@ final class AppServiceProvider extends ServiceProvider
         $this->app->bind(GetSellerDashboardHandler::class, GetSellerDashboardHandler::class);
         $this->app->bind(CommissionCalculatorService::class, CommissionCalculatorService::class);
         $this->app->bind(ProcessPayoutHandler::class, ProcessPayoutHandler::class);
+
+        // ─── Módulo Shipping — repositórios e gateway ─────────────────────────
+        $this->app->bind(ShippingGatewayInterface::class, MelhorEnvioGateway::class);
+        $this->app->bind(ShippingZoneRepositoryInterface::class, EloquentShippingZoneRepository::class);
+        $this->app->bind(ShippingRateRepositoryInterface::class, EloquentShippingRateRepository::class);
+
+        // ─── Módulo Shipping — handlers de Use Cases ──────────────────────────
+        $this->app->bind(InternalRateCalculator::class, InternalRateCalculator::class);
+        $this->app->bind(CalculateShippingHandler::class, CalculateShippingHandler::class);
+        $this->app->bind(GenerateLabelHandler::class, GenerateLabelHandler::class);
+        $this->app->bind(ProcessTrackingWebhookHandler::class, ProcessTrackingWebhookHandler::class);
     }
 
     public function boot(): void
@@ -135,6 +160,13 @@ final class AppServiceProvider extends ServiceProvider
         // Listener: PaymentRejected → cancela comissões pendentes do pedido
         Event::listen(PaymentRejected::class, function (PaymentRejected $event): void {
             app(CommissionRepositoryInterface::class)->cancelByOrderId($event->orderId);
+        });
+
+        // Listener: PaymentApproved → gera etiqueta de envio via Melhor Envio
+        Event::listen(PaymentApproved::class, function (PaymentApproved $event): void {
+            app(GenerateLabelHandler::class)->handle(
+                new \App\Modules\Shipping\Application\UseCases\GenerateLabel\GenerateLabelCommand($event->orderId)
+            );
         });
     }
 }

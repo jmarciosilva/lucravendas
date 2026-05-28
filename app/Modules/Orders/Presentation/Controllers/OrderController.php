@@ -11,6 +11,7 @@ use App\Modules\Orders\Application\UseCases\GetOrders\GetOrdersHandler;
 use App\Modules\Orders\Domain\Repositories\OrderRepositoryInterface;
 use App\Modules\Orders\Presentation\Requests\CheckoutRequest;
 use App\Modules\Orders\Presentation\Resources\OrderResource;
+use App\Modules\Shipping\Domain\ValueObjects\ShippingAddress;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use RuntimeException;
@@ -29,12 +30,30 @@ final class OrderController extends Controller
     public function checkout(CheckoutRequest $request): JsonResponse
     {
         try {
+            // Constrói o endereço de entrega se os dados foram fornecidos
+            $shippingAddress = null;
+            $recipientState  = $request->validated('recipient_state');
+            if ($request->filled('recipient_name') && $request->filled('recipient_zipcode') && $recipientState) {
+                $shippingAddress = new ShippingAddress(
+                    recipientName: $request->validated('recipient_name'),
+                    zipcode: $request->validated('recipient_zipcode'),
+                    address: $request->validated('recipient_address', ''),
+                    number: $request->validated('recipient_number', 's/n'),
+                    complement: $request->validated('recipient_complement'),
+                    city: $request->validated('recipient_city', ''),
+                    state: strtoupper($recipientState),
+                );
+            }
+
             $order = $this->checkoutHandler->handle(new CheckoutCommand(
-                tenantId:      $request->header('X-Tenant-ID', ''),
-                sessionId:     $request->header('X-Cart-Session'),
-                userId:        $request->user()->id,
-                paymentMethod: $request->validated('payment_method'),
-                notes:         $request->validated('notes'),
+                tenantId:            $request->header('X-Tenant-ID', ''),
+                sessionId:           $request->header('X-Cart-Session'),
+                userId:              $request->user()->id,
+                paymentMethod:       $request->validated('payment_method'),
+                notes:               $request->validated('notes'),
+                shippingOptionId:    $request->validated('shipping_option_id'),
+                shippingAddress:     $shippingAddress,
+                shippingServiceCode: $request->validated('shipping_service_code'),
             ));
 
             return response()->json(['data' => new OrderResource($order)], 201);

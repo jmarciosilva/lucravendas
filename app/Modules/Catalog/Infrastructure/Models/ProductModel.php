@@ -43,6 +43,10 @@ class ProductModel extends Model implements HasMedia
         'category_id',
         'tenant_id',
         'seller_id',
+        'weight_grams',
+        'length_cm',
+        'width_cm',
+        'height_cm',
     ];
 
     /** @var array<string, string> */
@@ -50,6 +54,10 @@ class ProductModel extends Model implements HasMedia
         'price'         => 'integer',
         'compare_price' => 'integer',
         'stock'         => 'integer',
+        'weight_grams'  => 'integer',
+        'length_cm'     => 'integer',
+        'width_cm'      => 'integer',
+        'height_cm'     => 'integer',
         'deleted_at'    => 'datetime',
     ];
 

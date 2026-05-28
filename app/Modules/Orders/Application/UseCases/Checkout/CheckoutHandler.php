@@ -14,6 +14,7 @@ use App\Modules\Orders\Domain\Repositories\CartRepositoryInterface;
 use App\Modules\Orders\Domain\Repositories\OrderRepositoryInterface;
 use App\Modules\Orders\Infrastructure\Models\CouponModel;
 use App\Modules\Orders\Infrastructure\Models\CouponUsageModel;
+use App\Modules\Shipping\Domain\Repositories\ShippingRateRepositoryInterface;
 use Illuminate\Contracts\Events\Dispatcher;
 use Illuminate\Support\Facades\DB;
 use RuntimeException;
@@ -21,11 +22,12 @@ use RuntimeException;
 final class CheckoutHandler
 {
     public function __construct(
-        private readonly CartRepositoryInterface     $cartRepository,
-        private readonly OrderRepositoryInterface    $orderRepository,
-        private readonly GetCartHandler              $getCartHandler,
-        private readonly CommissionCalculatorService $commissionCalculator,
-        private readonly Dispatcher                  $events,
+        private readonly CartRepositoryInterface      $cartRepository,
+        private readonly OrderRepositoryInterface     $orderRepository,
+        private readonly GetCartHandler               $getCartHandler,
+        private readonly CommissionCalculatorService  $commissionCalculator,
+        private readonly ShippingRateRepositoryInterface $shippingRateRepository,
+        private readonly Dispatcher                   $events,
     ) {}
 
     public function handle(CheckoutCommand $command): Order
@@ -63,14 +65,33 @@ final class CheckoutHandler
             }
 
             // 2. Calcula totais
-            $subtotal = $cart->subtotal();
-            $discount = Money::fromCentavos(0);
-            $coupon   = null;
+            $subtotal     = $cart->subtotal();
+            $discount     = Money::fromCentavos(0);
+            $shippingCost = Money::fromCentavos(0);
+            $coupon       = null;
 
             if ($cart->couponId() !== null) {
                 $coupon = CouponModel::find($cart->couponId());
                 if ($coupon && $coupon->isValid($subtotal->centavos())) {
                     $discount = $cart->calculateDiscount($coupon->type, $coupon->value);
+                }
+            }
+
+            // 2b. Calcula custo de frete a partir da opção interna selecionada
+            $shippingServiceCode = $command->shippingServiceCode;
+            if ($command->shippingOptionId && str_starts_with($command->shippingOptionId, 'internal_')) {
+                $rateId = (int) substr($command->shippingOptionId, strlen('internal_'));
+                $rate   = $this->shippingRateRepository->findById($rateId);
+
+                if ($rate !== null && $rate->isActive()) {
+                    $totalWeight = 0;
+                    foreach ($cart->items() as $item) {
+                        $p = $productSnapshots[$item->productId()] ?? null;
+                        $totalWeight += ($p?->weight_grams ?? 300) * $item->quantity();
+                    }
+
+                    $shippingCost        = Money::fromCentavos($rate->calculatePrice($totalWeight, $subtotal->centavos()));
+                    $shippingServiceCode = $rate->serviceCode();
                 }
             }
 
@@ -94,11 +115,13 @@ final class CheckoutHandler
                 userId: $command->userId,
                 subtotal: $subtotal,
                 discount: $discount,
-                shippingCost: Money::fromCentavos(0),
+                shippingCost: $shippingCost,
                 couponId: $coupon?->id,
                 paymentMethod: $command->paymentMethod,
                 notes: $command->notes,
                 items: $orderItems,
+                shippingAddress: $command->shippingAddress,
+                shippingServiceCode: $shippingServiceCode,
             );
 
             $savedOrder = $this->orderRepository->save($order);

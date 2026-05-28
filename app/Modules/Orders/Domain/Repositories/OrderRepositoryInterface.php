@@ -19,4 +19,10 @@ interface OrderRepositoryInterface
 
     /** @return Order[] */
     public function findByUser(int $userId, string $tenantId): array;
+
+    /** Busca pedido pelo código de rastreio — usado no webhook de tracking. */
+    public function findByTrackingCode(string $trackingCode): ?Order;
+
+    /** Atualiza tracking_code, tracking_status e shipping_label_url do pedido. */
+    public function updateTracking(int $orderId, string $trackingCode, string $trackingStatus, ?string $labelUrl): void;
 }
