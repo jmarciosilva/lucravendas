@@ -26,6 +26,7 @@ O LucraVendas é uma API REST construída em Laravel 12 que alimenta lojas onlin
 | Storage | S3-compatible / local |
 | Media | spatie/laravel-medialibrary v11 |
 | Pagamentos | Mercado Pago SDK (PIX, cartão de crédito, boleto) |
+| Frete | Melhor Envio API v2 (cálculo, etiqueta, rastreio) |
 | Admin | Filament v3.3 |
 | Testes | PHPUnit + Pest |
 
@@ -183,6 +184,20 @@ MERCADO_PAGO_ACCESS_TOKEN=
 MERCADO_PAGO_PUBLIC_KEY=
 MERCADO_PAGO_WEBHOOK_SECRET=
 MERCADO_PAGO_SANDBOX=true
+
+# Melhor Envio (frete, etiqueta, rastreio)
+MELHORENVIO_TOKEN=
+MELHORENVIO_SANDBOX=true
+MELHORENVIO_FROM_NAME=LucraVendas
+MELHORENVIO_FROM_EMAIL=
+MELHORENVIO_FROM_PHONE=
+MELHORENVIO_FROM_DOCUMENT=
+MELHORENVIO_FROM_ADDRESS=
+MELHORENVIO_FROM_NUMBER=
+MELHORENVIO_FROM_CITY=
+MELHORENVIO_FROM_STATE=
+MELHORENVIO_FROM_ZIPCODE=
+SHIPPING_GATEWAY=both           # internal | melhorenvio | both
 ```
 
 ---
@@ -245,8 +260,20 @@ GET    /api/v1/payments/{orderId}/status # consulta última transação
 # Webhook Mercado Pago (sem autenticação — chamado pelos servidores do MP)
 POST   /api/v1/webhooks/mercadopago
 
-# Marketplace (fases futuras)
+# Marketplace (público)
 GET    /api/v1/marketplace/sellers
+GET    /api/v1/marketplace/sellers/{slug}
+GET    /api/v1/marketplace/sellers/{slug}/products
+
+# Marketplace (requer autenticação)
+POST   /api/v1/sellers/register
+GET    /api/v1/seller/dashboard
+
+# Frete (público — carrinho anônimo ou autenticado)
+GET    /api/v1/shipping/calculate?zipcode=&state=
+
+# Webhook Melhor Envio (sem autenticação — rastreio)
+POST   /api/v1/webhooks/shipping
 ```
 
 ---
@@ -272,6 +299,8 @@ Senha:  12345678
 | **Usuários** | CRUD com roles, máscara de telefone, formatação automática de nome |
 | **Importação** | Upload de planilha CSV/XLSX para categorias, produtos e usuários em massa |
 | **Financeiro** | Listagem de transações (PIX/Cartão/Boleto), badges de status, ação de estorno com confirmação |
+| **Marketplace** | Aprovação/suspensão de sellers, comissões por item, repasses (payouts), widget GMV |
+| **Frete** | CRUD de zonas por UF (27 estados), tarifas com frete grátis configurável por valor mínimo |
 
 ### Importação via planilha
 
@@ -300,8 +329,8 @@ php artisan test --testsuite=Feature
 php artisan test --coverage
 ```
 
-94 testes passando. Os testes usam SQLite em memória — independentes do banco principal.
-O gateway Mercado Pago é **mockado** nos testes — nenhuma chamada real é feita ao sandbox.
+116 testes passando. Os testes usam SQLite em memória — independentes do banco principal.
+Os gateways Mercado Pago e Melhor Envio são **mockados** nos testes — nenhuma chamada real é feita às APIs externas.
 
 ---
 
@@ -338,8 +367,8 @@ O projeto segue **Domain-Driven Design (DDD)**:
 | 2 | Catálogo: produtos, categorias, API, importação via planilha | Concluída |
 | 3 | Carrinho e checkout | Concluída |
 | 4 | Pagamentos via Mercado Pago (PIX, cartão, boleto) | Concluída |
-| 5 | Marketplace multi-seller | Pendente |
-| 6 | Frete e logística | Pendente |
+| 5 | Marketplace multi-seller (sellers, comissões, repasses) | Concluída |
+| 6 | Frete e logística (Melhor Envio, tarifas internas, rastreio) | Concluída |
 | 7 | LucraMarketing nativo | Pendente |
 | 8 | Observabilidade e performance | Pendente |
 | 9 | Go-live e infraestrutura | Pendente |

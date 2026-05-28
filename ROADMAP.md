@@ -327,14 +327,74 @@ composer require filament/spatie-laravel-media-library-plugin:"^3.3"
 
 ---
 
-## FASE 6 — Frete e Logística
+## FASE 6 — Frete e Logística `[x]`
 
-- [ ] Migration `shipping_zones` e `shipping_rates`
-- [ ] Integração com Correios / Melhor Envio
-- [ ] `GET /api/v1/shipping/calculate` — opções de frete
-- [ ] Geração de etiqueta pós-pagamento
-- [ ] Tracking via webhook do transportador
-- [ ] Frete grátis por valor mínimo por tenant
+> Objetivo: cliente calcula frete antes de finalizar o pedido; etiqueta gerada automaticamente após pagamento; rastreio via webhook.
+
+### 6.1 Modelo de dados
+
+- [x] Migration `shipping_zones` (`id`, `tenant_id`, `name`, `states` JSON, `is_active`)
+- [x] Migration `shipping_rates` (`id`, `zone_id`, `tenant_id`, `name`, `carrier`, `service_code`, `base_price`, `price_per_kg`, `min_days`, `max_days`, `free_shipping_threshold` nullable, `is_active`)
+- [x] Coluna `origin_zipcode` adicionada à tabela `tenants` (CEP de origem para cálculo)
+- [x] Colunas de dimensões físicas em `products`: `weight_grams`, `length_cm`, `width_cm`, `height_cm`
+- [x] Campos de entrega + rastreio em `orders`: `recipient_*`, `shipping_service_code`, `tracking_code`, `tracking_status`, `shipping_label_url`
+
+### 6.2 Gateway Melhor Envio (`MelhorEnvioGateway`)
+
+- [x] `ShippingGatewayInterface` — contratos: `calculateRates`, `generateLabel`, `getTrackingStatus`
+- [x] `MelhorEnvioGateway` implementando a interface via API v2 (sandbox + produção)
+- [x] `calculateRates()` — POST `/me/shipment/calculate`, consolida pacotes, filtra erros
+- [x] `generateLabel()` — fluxo completo: add cart → checkout → generate → print URL
+- [x] `getTrackingStatus()` — consulta eventos de rastreio por código
+- [x] Gateway mockável nos testes (mesmo padrão do `PaymentGatewayInterface`)
+
+### 6.3 Sistema interno de tarifas (`InternalRateCalculator`)
+
+- [x] Cálculo offline por zona/UF — sem dependência de API externa
+- [x] Preço = `base_price + (peso_kg × price_per_kg)`
+- [x] Frete grátis quando `subtotal >= free_shipping_threshold` (por tarifa)
+- [x] Gateway mode configurável: `internal` | `melhorenvio` | `both` (via `SHIPPING_GATEWAY`)
+
+### 6.4 API de frete
+
+- [x] `GET  /api/v1/shipping/calculate?zipcode=&state=` — retorna opções internas + ME mescladas, ordenadas por preço
+- [x] `POST /api/v1/webhooks/shipping` — recebe notificações de rastreio do Melhor Envio (sem auth)
+
+### 6.5 Integração com checkout
+
+- [x] `CheckoutCommand` aceita `shipping_option_id` ("internal_5" ou "me_2"), endereço do destinatário e `shipping_service_code`
+- [x] `CheckoutHandler` aplica custo da tarifa interna ao pedido (re-calcula do banco para segurança)
+- [x] Endereço de entrega persistido na tabela `orders`
+
+### 6.6 Geração de etiqueta pós-pagamento
+
+- [x] Listener `PaymentApproved` → `GenerateLabelHandler` (gera etiqueta via ME após pagamento confirmado)
+- [x] `GenerateLabelHandler` constrói pacotes a partir dos itens do pedido e dimensões dos produtos
+- [x] Atualiza `tracking_code` e `shipping_label_url` no pedido
+
+### 6.7 Tracking via webhook
+
+- [x] `ProcessTrackingWebhookHandler` — localiza pedido por `tracking_code`, atualiza `tracking_status`
+- [x] Status `delivered` → transiciona pedido para `OrderStatus::DELIVERED`
+- [x] Registra evento no histórico de status do pedido
+
+### 6.8 Admin Filament (grupo **Frete**)
+
+- [x] `ShippingZoneResource` — CRUD de zonas com CheckboxList dos 27 estados brasileiros
+- [x] `ShippingRateResource` — CRUD de tarifas: transportadora, preço base, adicional/kg, frete grátis
+- [x] `config/shipping.php` — configuração centralizada do gateway e dimensões padrão
+
+### 6.9 Testes — 9 testes passando (suite completa: 116 testes)
+
+- [x] Teste: retorna opções de frete para CEP em zona configurada
+- [x] Teste: retorna opções do Melhor Envio quando gateway configurado (mockado)
+- [x] Teste: frete grátis quando subtotal ≥ threshold
+- [x] Teste: lista vazia para CEP fora das zonas configuradas
+- [x] Teste: checkout registra endereço de entrega no pedido
+- [x] Teste: checkout com opção interna aplica custo correto no total
+- [x] Teste: webhook de rastreio atualiza status do pedido
+- [x] Teste: webhook com status `delivered` transiciona pedido para entregue
+- [x] Teste: webhook com tracking inexistente retorna `ok: false`
 
 ---
 

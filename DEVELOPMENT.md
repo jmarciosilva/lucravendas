@@ -230,7 +230,7 @@ php artisan test
 docker compose exec app php artisan test
 ```
 
-Resultado esperado: **94 testes passando**, 0 falhas.
+Resultado esperado: **116 testes passando**, 0 falhas.
 
 ### Executar por suite
 
@@ -250,9 +250,13 @@ php artisan test --filter=Catalog
 php artisan test --filter=Cart
 php artisan test --filter=Checkout
 php artisan test --filter=Payment
+php artisan test --filter=Marketplace
+php artisan test --filter=Shipping
 php artisan test tests/Feature/Catalog/ProductTest.php
 php artisan test tests/Feature/Checkout/CartTest.php
 php artisan test tests/Feature/Payments/PaymentTest.php
+php artisan test tests/Feature/Marketplace/
+php artisan test tests/Feature/Shipping/
 ```
 
 ### O que cada grupo de testes valida
@@ -272,6 +276,13 @@ php artisan test tests/Feature/Payments/PaymentTest.php
 | Feature | `tests/Feature/Checkout/CartTest.php` | Carrinho anônimo, merge, cupons, estoque |
 | Feature | `tests/Feature/Checkout/CheckoutTest.php` | Fluxo completo checkout, estoque, cupom no total |
 | Feature | `tests/Feature/Payments/PaymentTest.php` | PIX/cartão/boleto (gateway mockado), webhook approved/rejected, auth guard |
+| Feature | `tests/Feature/Marketplace/SellerRegistrationTest.php` | Cadastro de seller, duplicatas, auth guard |
+| Feature | `tests/Feature/Marketplace/SellerListingTest.php` | Listagem pública, perfil por slug, produtos do seller |
+| Feature | `tests/Feature/Marketplace/SellerDashboardTest.php` | Dashboard autenticado, métricas, 404 sem seller |
+| Feature | `tests/Feature/Marketplace/CommissionCalculationTest.php` | Comissão criada no checkout, sem comissão para produto sem seller |
+| Feature | `tests/Feature/Shipping/ShippingCalculateTest.php` | Cálculo interno por zona, ME mockado, frete grátis, zona inexistente |
+| Feature | `tests/Feature/Shipping/CheckoutWithShippingTest.php` | Endereço persistido, custo de frete aplicado na tarifa interna |
+| Feature | `tests/Feature/Shipping/TrackingWebhookTest.php` | Atualização de tracking, transição delivered, tracking inexistente |
 
 ---
 
@@ -408,6 +419,59 @@ curl -X DELETE http://localhost:8000/api/v1/products/1 \
   -H "X-Tenant-ID: uuid"
 ```
 
+### Marketplace — Sellers
+
+```bash
+# Listar sellers ativos do tenant (público)
+curl http://localhost:8000/api/v1/marketplace/sellers -H "X-Tenant-ID: uuid"
+
+# Perfil público de um seller (público)
+curl http://localhost:8000/api/v1/marketplace/sellers/nome-do-seller -H "X-Tenant-ID: uuid"
+
+# Produtos do seller (público)
+curl http://localhost:8000/api/v1/marketplace/sellers/nome-do-seller/products -H "X-Tenant-ID: uuid"
+
+# Auto-cadastro como seller (requer autenticação)
+curl -X POST http://localhost:8000/api/v1/sellers/register \
+  -H "Authorization: Bearer SEU_TOKEN" \
+  -H "Content-Type: application/json" \
+  -H "X-Tenant-ID: uuid" \
+  -d '{"name": "Minha Loja", "description": "Descrição da loja"}'
+
+# Dashboard do seller autenticado
+curl http://localhost:8000/api/v1/seller/dashboard \
+  -H "Authorization: Bearer SEU_TOKEN" \
+  -H "X-Tenant-ID: uuid"
+```
+
+### Frete — Cálculo e Checkout com entrega
+
+```bash
+# Calcular opções de frete para o carrinho atual
+curl "http://localhost:8000/api/v1/shipping/calculate?zipcode=01310-100&state=SP" \
+  -H "X-Tenant-ID: uuid" \
+  -H "X-Cart-Session: SESSAO_DO_CARRINHO"
+
+# Checkout com frete selecionado e endereço de entrega
+curl -X POST http://localhost:8000/api/v1/checkout \
+  -H "Authorization: Bearer SEU_TOKEN" \
+  -H "Content-Type: application/json" \
+  -H "X-Tenant-ID: uuid" \
+  -d '{
+    "payment_method": "pix",
+    "shipping_option_id": "internal_1",
+    "recipient_name": "João Silva",
+    "recipient_zipcode": "01310-100",
+    "recipient_address": "Avenida Paulista",
+    "recipient_number": "1578",
+    "recipient_complement": "Apto 42",
+    "recipient_city": "São Paulo",
+    "recipient_state": "SP"
+  }'
+```
+
+> O `shipping_option_id` é obtido da resposta do endpoint `/shipping/calculate`. Prefixo `internal_N` para tarifas da tabela interna; prefixo `me_N` para opções do Melhor Envio.
+
 ### Pagamentos — Mercado Pago
 
 Os endpoints de pagamento requerem `MERCADO_PAGO_ACCESS_TOKEN` configurado no `.env`. Em desenvolvimento, use as **credenciais de sandbox** obtidas em https://www.mercadopago.com.br/developers/panel.
@@ -481,8 +545,17 @@ tests/
 │   ├── Checkout/
 │   │   ├── CartTest.php                  # Carrinho anônimo, merge, cupons, estoque
 │   │   └── CheckoutTest.php              # Fluxo completo, estoque, desconto
+│   ├── Marketplace/
+│   │   ├── SellerRegistrationTest.php    # Cadastro, duplicatas, auth guard
+│   │   ├── SellerListingTest.php         # Listagem pública, perfil, produtos do seller
+│   │   ├── SellerDashboardTest.php       # Dashboard autenticado, métricas
+│   │   └── CommissionCalculationTest.php # Comissão no checkout, sem seller
 │   ├── Payments/
 │   │   └── PaymentTest.php               # PIX/cartão/boleto, webhook, auth guard
+│   ├── Shipping/
+│   │   ├── ShippingCalculateTest.php     # Cálculo interno, ME mockado, frete grátis
+│   │   ├── CheckoutWithShippingTest.php  # Endereço persistido, custo aplicado
+│   │   └── TrackingWebhookTest.php       # Atualização tracking, delivered, inexistente
 │   └── ExampleTest.php
 └── Unit/
     ├── Catalog/
