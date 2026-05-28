@@ -17,6 +17,15 @@ use App\Modules\Catalog\Infrastructure\Repositories\EloquentProductRepository;
 use App\Jobs\SendOrderConfirmationEmail;
 use App\Modules\Orders\Application\UseCases\AddCartItem\AddCartItemHandler;
 use App\Modules\Orders\Domain\Events\OrderCreated;
+use App\Modules\Payments\Application\UseCases\CreateBoletoPayment\CreateBoletoPaymentHandler;
+use App\Modules\Payments\Application\UseCases\CreateCardPayment\CreateCardPaymentHandler;
+use App\Modules\Payments\Application\UseCases\CreatePixPayment\CreatePixPaymentHandler;
+use App\Modules\Payments\Application\UseCases\ProcessWebhook\ProcessWebhookHandler;
+use App\Modules\Payments\Application\UseCases\RefundPayment\RefundPaymentHandler;
+use App\Modules\Payments\Domain\Contracts\PaymentGatewayInterface;
+use App\Modules\Payments\Domain\Repositories\PaymentTransactionRepositoryInterface;
+use App\Modules\Payments\Infrastructure\Gateways\MercadoPagoGateway;
+use App\Modules\Payments\Infrastructure\Repositories\EloquentPaymentTransactionRepository;
 use App\Modules\Orders\Application\UseCases\ApplyCoupon\ApplyCouponHandler;
 use App\Modules\Orders\Application\UseCases\Checkout\CheckoutHandler;
 use App\Modules\Orders\Application\UseCases\GetCart\GetCartHandler;
@@ -73,6 +82,17 @@ final class AppServiceProvider extends ServiceProvider
         $this->app->bind(RemoveCouponHandler::class, RemoveCouponHandler::class);
         $this->app->bind(CheckoutHandler::class, CheckoutHandler::class);
         $this->app->bind(GetOrdersHandler::class, GetOrdersHandler::class);
+
+        // ─── Módulo Payments — gateway e repositório ──────────────────────────
+        $this->app->bind(PaymentGatewayInterface::class, MercadoPagoGateway::class);
+        $this->app->bind(PaymentTransactionRepositoryInterface::class, EloquentPaymentTransactionRepository::class);
+
+        // ─── Módulo Payments — handlers de Use Cases ──────────────────────────
+        $this->app->bind(CreatePixPaymentHandler::class, CreatePixPaymentHandler::class);
+        $this->app->bind(CreateCardPaymentHandler::class, CreateCardPaymentHandler::class);
+        $this->app->bind(CreateBoletoPaymentHandler::class, CreateBoletoPaymentHandler::class);
+        $this->app->bind(ProcessWebhookHandler::class, ProcessWebhookHandler::class);
+        $this->app->bind(RefundPaymentHandler::class, RefundPaymentHandler::class);
     }
 
     public function boot(): void

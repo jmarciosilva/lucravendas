@@ -121,6 +121,35 @@ final class Order
         $this->status = $this->status->transitionTo(OrderStatus::DELIVERED);
     }
 
+    /**
+     * Marca o pagamento como aprovado e confirma o pedido.
+     * Chamado pelo ProcessWebhookHandler ao receber status 'approved' do MP.
+     */
+    public function markAsPaid(): void
+    {
+        $this->paymentStatus = PaymentStatus::from(PaymentStatus::PAID);
+        $this->status        = $this->status->transitionTo(OrderStatus::CONFIRMED);
+    }
+
+    /**
+     * Marca pagamento como falho e cancela o pedido.
+     * Chamado pelo ProcessWebhookHandler ao receber 'rejected' ou 'cancelled'.
+     */
+    public function markAsPaymentFailed(): void
+    {
+        $this->paymentStatus = PaymentStatus::from(PaymentStatus::FAILED);
+        $this->status        = $this->status->transitionTo(OrderStatus::CANCELLED);
+    }
+
+    /**
+     * Marca pagamento como estornado.
+     * Chamado pelo RefundPaymentHandler após confirmar estorno no MP.
+     */
+    public function markAsRefunded(): void
+    {
+        $this->paymentStatus = PaymentStatus::from(PaymentStatus::REFUNDED);
+    }
+
     public function pullDomainEvents(): array
     {
         $events = $this->domainEvents;

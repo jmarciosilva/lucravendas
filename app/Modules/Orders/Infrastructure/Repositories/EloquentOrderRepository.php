@@ -57,12 +57,27 @@ class EloquentOrderRepository implements OrderRepositoryInterface
         return $this->toDomain($model);
     }
 
+    public function update(Order $order): void
+    {
+        OrderModel::where('id', $order->id())->update([
+            'status'         => $order->status()->value(),
+            'payment_status' => $order->paymentStatus()->value(),
+        ]);
+    }
+
     public function findById(int $id, string $tenantId): ?Order
     {
         $model = OrderModel::with('items')
             ->where('id', $id)
             ->where('tenant_id', $tenantId)
             ->first();
+
+        return $model ? $this->toDomain($model) : null;
+    }
+
+    public function findByIdRaw(int $id): ?Order
+    {
+        $model = OrderModel::with('items')->find($id);
 
         return $model ? $this->toDomain($model) : null;
     }

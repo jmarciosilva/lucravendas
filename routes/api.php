@@ -81,6 +81,22 @@ Route::prefix('v1')->name('api.v1.')->group(function (): void {
 
     });
 
+    // ─── Pagamentos via Mercado Pago (requer autenticação) ───────────────────
+    Route::prefix('payments')->name('payments.')->middleware('auth:sanctum')->group(function (): void {
+        Route::post('/pix', [\App\Modules\Payments\Presentation\Controllers\PaymentController::class, 'pix'])
+            ->name('pix');
+        Route::post('/card', [\App\Modules\Payments\Presentation\Controllers\PaymentController::class, 'card'])
+            ->name('card');
+        Route::post('/boleto', [\App\Modules\Payments\Presentation\Controllers\PaymentController::class, 'boleto'])
+            ->name('boleto');
+        Route::get('/{orderId}/status', [\App\Modules\Payments\Presentation\Controllers\PaymentController::class, 'status'])
+            ->name('status');
+    });
+
+    // ─── Webhook Mercado Pago (sem autenticação — chamado pelos servidores do MP)
+    Route::post('/webhooks/mercadopago', [\App\Modules\Payments\Presentation\Controllers\WebhookController::class, 'mercadopago'])
+        ->name('webhooks.mercadopago');
+
     // ─── Carrinho — público (anônimo via X-Cart-Session ou autenticado) ───────
     Route::prefix('cart')->name('cart.')->group(function (): void {
         Route::get('/', [\App\Modules\Orders\Presentation\Controllers\CartController::class, 'show'])
