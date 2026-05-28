@@ -230,7 +230,7 @@ php artisan test
 docker compose exec app php artisan test
 ```
 
-Resultado esperado: **53 testes passando**, 0 falhas.
+Resultado esperado: **94 testes passando**, 0 falhas.
 
 ### Executar por suite
 
@@ -247,8 +247,12 @@ php artisan test --testsuite=Feature
 ```bash
 php artisan test --filter=Auth
 php artisan test --filter=Catalog
+php artisan test --filter=Cart
+php artisan test --filter=Checkout
+php artisan test --filter=Payment
 php artisan test tests/Feature/Catalog/ProductTest.php
-php artisan test tests/Feature/Catalog/CategoryTest.php
+php artisan test tests/Feature/Checkout/CartTest.php
+php artisan test tests/Feature/Payments/PaymentTest.php
 ```
 
 ### O que cada grupo de testes valida
@@ -258,10 +262,16 @@ php artisan test tests/Feature/Catalog/CategoryTest.php
 | Unit | `tests/Unit/Tenant/TenantEntityTest.php` | Entidade `Tenant`, status, planos, eventos de domínio, Value Objects |
 | Unit | `tests/Unit/Catalog/ProductEntityTest.php` | Entidade `Product`, publicação, estoque, eventos de domínio |
 | Unit | `tests/Unit/Catalog/MoneyTest.php` | Value Object `Money` — centavos, reais, formatação, comparação |
+| Unit | `tests/Unit/Checkout/CartEntityTest.php` | Entidade `Cart` — subtotal, desconto, merge de itens, validações |
+| Unit | `tests/Unit/Checkout/OrderEntityTest.php` | Entidade `Order` — transições de status, cálculo de total, eventos |
+| Unit | `tests/Unit/Payments/PaymentTransactionTest.php` | `markAsPaid/Failed/Refunded`, normalização de status do MP |
 | Feature | `tests/Feature/Auth/RegisterTest.php` | Registro, validação, role padrão, e-mail duplicado |
 | Feature | `tests/Feature/Auth/LoginTest.php` | Login, credenciais inválidas, logout, `/me` |
 | Feature | `tests/Feature/Catalog/CategoryTest.php` | Árvore, criação, subcategorias, isolamento por tenant |
 | Feature | `tests/Feature/Catalog/ProductTest.php` | CRUD, filtros de preço, soft delete, isolamento, rascunhos |
+| Feature | `tests/Feature/Checkout/CartTest.php` | Carrinho anônimo, merge, cupons, estoque |
+| Feature | `tests/Feature/Checkout/CheckoutTest.php` | Fluxo completo checkout, estoque, cupom no total |
+| Feature | `tests/Feature/Payments/PaymentTest.php` | PIX/cartão/boleto (gateway mockado), webhook approved/rejected, auth guard |
 
 ---
 
@@ -398,6 +408,40 @@ curl -X DELETE http://localhost:8000/api/v1/products/1 \
   -H "X-Tenant-ID: uuid"
 ```
 
+### Pagamentos — Mercado Pago
+
+Os endpoints de pagamento requerem `MERCADO_PAGO_ACCESS_TOKEN` configurado no `.env`. Em desenvolvimento, use as **credenciais de sandbox** obtidas em https://www.mercadopago.com.br/developers/panel.
+
+```bash
+# Gerar cobrança PIX (retorna qr_code e qr_code_base64)
+curl -X POST http://localhost:8000/api/v1/payments/pix \
+  -H "Authorization: Bearer SEU_TOKEN" \
+  -H "Content-Type: application/json" \
+  -H "X-Tenant-ID: uuid" \
+  -d '{"order_id": 1}'
+
+# Processar cartão de crédito (card_token gerado pelo MP.js no frontend)
+curl -X POST http://localhost:8000/api/v1/payments/card \
+  -H "Authorization: Bearer SEU_TOKEN" \
+  -H "Content-Type: application/json" \
+  -H "X-Tenant-ID: uuid" \
+  -d '{"order_id": 1, "card_token": "TOKEN_DO_MP", "installments": 1, "payer_email": "pagador@email.com"}'
+
+# Gerar boleto bancário
+curl -X POST http://localhost:8000/api/v1/payments/boleto \
+  -H "Authorization: Bearer SEU_TOKEN" \
+  -H "Content-Type: application/json" \
+  -H "X-Tenant-ID: uuid" \
+  -d '{"order_id": 1, "payer_email": "pagador@email.com", "payer_cpf": "123.456.789-09"}'
+
+# Consultar status do pagamento
+curl http://localhost:8000/api/v1/payments/1/status \
+  -H "Authorization: Bearer SEU_TOKEN" \
+  -H "X-Tenant-ID: uuid"
+```
+
+> **Testes automatizados:** o `MercadoPagoGateway` é mockado com `$this->mock()` — nenhuma chamada real é feita ao sandbox. Para testar a integração real, configure as credenciais de sandbox e use os cartões de teste fornecidos pelo Mercado Pago.
+
 ---
 
 ## Comandos Artisan úteis
@@ -425,22 +469,32 @@ php artisan tenants:migrate --tenants=UUID_DO_TENANT
 
 ```
 tests/
-├── Pest.php                          # Configuração global do Pest
-├── TestCase.php                      # Base: semeia roles/permissions em cada teste Feature
+├── Pest.php                              # Configuração global do Pest
+├── TestCase.php                          # Base: semeia roles/permissions em cada teste Feature
 ├── Feature/
 │   ├── Auth/
-│   │   ├── LoginTest.php             # Login, logout, /me, token inválido
-│   │   └── RegisterTest.php          # Registro, validação, role padrão
+│   │   ├── LoginTest.php                 # Login, logout, /me, token inválido
+│   │   └── RegisterTest.php              # Registro, validação, role padrão
 │   ├── Catalog/
-│   │   ├── CategoryTest.php          # Árvore, criação, subcategorias, isolamento
-│   │   └── ProductTest.php           # CRUD, filtros, soft delete, isolamento
+│   │   ├── CategoryTest.php              # Árvore, criação, subcategorias, isolamento
+│   │   └── ProductTest.php               # CRUD, filtros, soft delete, isolamento
+│   ├── Checkout/
+│   │   ├── CartTest.php                  # Carrinho anônimo, merge, cupons, estoque
+│   │   └── CheckoutTest.php              # Fluxo completo, estoque, desconto
+│   ├── Payments/
+│   │   └── PaymentTest.php               # PIX/cartão/boleto, webhook, auth guard
 │   └── ExampleTest.php
 └── Unit/
     ├── Catalog/
-    │   ├── MoneyTest.php             # Value Object Money
-    │   └── ProductEntityTest.php     # Entidade Product
+    │   ├── MoneyTest.php                 # Value Object Money
+    │   └── ProductEntityTest.php         # Entidade Product
+    ├── Checkout/
+    │   ├── CartEntityTest.php            # Entidade Cart — subtotal, merge, desconto
+    │   └── OrderEntityTest.php           # Entidade Order — status, total, eventos
+    ├── Payments/
+    │   └── PaymentTransactionTest.php    # markAsPaid/Failed/Refunded, normalização MP
     ├── Tenant/
-    │   └── TenantEntityTest.php      # Entidade Tenant + Value Objects
+    │   └── TenantEntityTest.php          # Entidade Tenant + Value Objects
     └── ExampleTest.php
 ```
 

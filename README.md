@@ -25,6 +25,7 @@ O LucraVendas é uma API REST construída em Laravel 12 que alimenta lojas onlin
 | Busca | Laravel Scout + Meilisearch (produção) / null driver (desenvolvimento) |
 | Storage | S3-compatible / local |
 | Media | spatie/laravel-medialibrary v11 |
+| Pagamentos | Mercado Pago SDK (PIX, cartão de crédito, boleto) |
 | Admin | Filament v3.3 |
 | Testes | PHPUnit + Pest |
 
@@ -116,7 +117,7 @@ app/
 │   ├── Marketing/       # LucraMarketing nativo (posts, agendamento)
 │   ├── Marketplace/     # multi-seller, comissões, vitrines
 │   ├── Orders/          # carrinho, checkout, pedidos, status
-│   ├── Payments/        # gateways (PIX, cartão)
+│   ├── Payments/        # Mercado Pago: PIX, cartão, boleto, webhook, estorno
 │   ├── Shipping/        # cálculo de frete, integrações
 │   └── Tenant/          # gestão de lojas, usuários, autenticação
 ├── Shared/
@@ -235,11 +236,13 @@ POST   /api/v1/checkout
 GET    /api/v1/orders
 GET    /api/v1/orders/{id}
 
-# Pagamentos via Mercado Pago (Fase 4 — em desenvolvimento)
-POST   /api/v1/payments/pix
-POST   /api/v1/payments/card
-POST   /api/v1/payments/boleto
-GET    /api/v1/payments/{orderId}/status
+# Pagamentos via Mercado Pago (requer autenticação)
+POST   /api/v1/payments/pix              # gera QR Code PIX
+POST   /api/v1/payments/card             # processa cartão (card_token via MP.js)
+POST   /api/v1/payments/boleto           # gera boleto com ticket_url
+GET    /api/v1/payments/{orderId}/status # consulta última transação
+
+# Webhook Mercado Pago (sem autenticação — chamado pelos servidores do MP)
 POST   /api/v1/webhooks/mercadopago
 
 # Marketplace (fases futuras)
@@ -268,6 +271,7 @@ Senha:  12345678
 | **Categorias** | CRUD com hierarquia (categorias pai/filho), ordenação |
 | **Usuários** | CRUD com roles, máscara de telefone, formatação automática de nome |
 | **Importação** | Upload de planilha CSV/XLSX para categorias, produtos e usuários em massa |
+| **Financeiro** | Listagem de transações (PIX/Cartão/Boleto), badges de status, ação de estorno com confirmação |
 
 ### Importação via planilha
 
@@ -296,7 +300,8 @@ php artisan test --testsuite=Feature
 php artisan test --coverage
 ```
 
-83 testes passando. Os testes usam SQLite em memória — independentes do banco principal.
+94 testes passando. Os testes usam SQLite em memória — independentes do banco principal.
+O gateway Mercado Pago é **mockado** nos testes — nenhuma chamada real é feita ao sandbox.
 
 ---
 
@@ -332,7 +337,7 @@ O projeto segue **Domain-Driven Design (DDD)**:
 | 1 | Fundação: setup, multi-tenancy, autenticação, painel admin base | Concluída |
 | 2 | Catálogo: produtos, categorias, API, importação via planilha | Concluída |
 | 3 | Carrinho e checkout | Concluída |
-| 4 | Pagamentos via Mercado Pago (PIX, cartão, boleto) | Em andamento |
+| 4 | Pagamentos via Mercado Pago (PIX, cartão, boleto) | Concluída |
 | 5 | Marketplace multi-seller | Pendente |
 | 6 | Frete e logística | Pendente |
 | 7 | LucraMarketing nativo | Pendente |

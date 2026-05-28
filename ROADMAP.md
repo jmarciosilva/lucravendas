@@ -298,7 +298,7 @@ composer require filament/spatie-laravel-media-library-plugin:"^3.3"
 
 - [ ] Service `CommissionCalculator`
 - [ ] Job `ProcessPayout` — repasse para sellers (semanal via Schedule)
-- [ ] Split de pagamento (Stripe Connect ou EFI Split)
+- [ ] Split de pagamento via Mercado Pago Marketplace API
 
 ### 5.4 Admin
 
@@ -379,4 +379,5 @@ composer require filament/spatie-laravel-media-library-plugin:"^3.3"
 - [spatie/laravel-permission](https://spatie.be/docs/laravel-permission)
 - [spatie/laravel-medialibrary](https://spatie.be/docs/laravel-medialibrary)
 - [Laravel Scout](https://laravel.com/docs/12.x/scout)
-- [EFI Pay SDK PHP](https://github.com/efipay/sdk-php-apis-efi)
+- [Mercado Pago SDK PHP](https://github.com/mercadopago/sdk-php)
+- [Mercado Pago Developers](https://www.mercadopago.com.br/developers/pt/docs)
