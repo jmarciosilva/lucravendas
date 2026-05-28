@@ -67,10 +67,34 @@ Route::prefix('v1')->name('api.v1.')->group(function (): void {
                 ->name('images.store');
         });
 
-        // ─── Carrinho e Checkout — disponível em breve (Fase 3) ──────────────
-        // Route::apiResource('cart/items', CartItemController::class);
-        // Route::post('checkout', CheckoutController::class);
+        // ─── Pedidos — histórico e detalhe (requer autenticação) ─────────────
+        Route::prefix('orders')->name('orders.')->group(function (): void {
+            Route::get('/', [\App\Modules\Orders\Presentation\Controllers\OrderController::class, 'index'])
+                ->name('index');
+            Route::get('/{id}', [\App\Modules\Orders\Presentation\Controllers\OrderController::class, 'show'])
+                ->name('show');
+        });
 
+        // ─── Checkout (requer autenticação) ───────────────────────────────────
+        Route::post('checkout', [\App\Modules\Orders\Presentation\Controllers\OrderController::class, 'checkout'])
+            ->name('checkout');
+
+    });
+
+    // ─── Carrinho — público (anônimo via X-Cart-Session ou autenticado) ───────
+    Route::prefix('cart')->name('cart.')->group(function (): void {
+        Route::get('/', [\App\Modules\Orders\Presentation\Controllers\CartController::class, 'show'])
+            ->name('show');
+        Route::post('/items', [\App\Modules\Orders\Presentation\Controllers\CartController::class, 'addItem'])
+            ->name('items.store');
+        Route::put('/items/{id}', [\App\Modules\Orders\Presentation\Controllers\CartController::class, 'updateItem'])
+            ->name('items.update');
+        Route::delete('/items/{id}', [\App\Modules\Orders\Presentation\Controllers\CartController::class, 'removeItem'])
+            ->name('items.destroy');
+        Route::post('/coupon', [\App\Modules\Orders\Presentation\Controllers\CartController::class, 'applyCoupon'])
+            ->name('coupon.apply');
+        Route::delete('/coupon', [\App\Modules\Orders\Presentation\Controllers\CartController::class, 'removeCoupon'])
+            ->name('coupon.remove');
     });
 
 });

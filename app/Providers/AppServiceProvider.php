@@ -14,8 +14,23 @@ use App\Modules\Catalog\Domain\Repositories\CategoryRepositoryInterface;
 use App\Modules\Catalog\Domain\Repositories\ProductRepositoryInterface;
 use App\Modules\Catalog\Infrastructure\Repositories\EloquentCategoryRepository;
 use App\Modules\Catalog\Infrastructure\Repositories\EloquentProductRepository;
+use App\Jobs\SendOrderConfirmationEmail;
+use App\Modules\Orders\Application\UseCases\AddCartItem\AddCartItemHandler;
+use App\Modules\Orders\Domain\Events\OrderCreated;
+use App\Modules\Orders\Application\UseCases\ApplyCoupon\ApplyCouponHandler;
+use App\Modules\Orders\Application\UseCases\Checkout\CheckoutHandler;
+use App\Modules\Orders\Application\UseCases\GetCart\GetCartHandler;
+use App\Modules\Orders\Application\UseCases\GetOrders\GetOrdersHandler;
+use App\Modules\Orders\Application\UseCases\RemoveCartItem\RemoveCartItemHandler;
+use App\Modules\Orders\Application\UseCases\RemoveCoupon\RemoveCouponHandler;
+use App\Modules\Orders\Application\UseCases\UpdateCartItem\UpdateCartItemHandler;
+use App\Modules\Orders\Domain\Repositories\CartRepositoryInterface;
+use App\Modules\Orders\Domain\Repositories\OrderRepositoryInterface;
+use App\Modules\Orders\Infrastructure\Repositories\EloquentCartRepository;
+use App\Modules\Orders\Infrastructure\Repositories\EloquentOrderRepository;
 use App\Modules\Tenant\Application\UseCases\LoginUser\LoginUserHandler;
 use App\Modules\Tenant\Application\UseCases\RegisterUser\RegisterUserHandler;
+use Illuminate\Support\Facades\Event;
 use Illuminate\Support\ServiceProvider;
 
 /**
@@ -44,7 +59,27 @@ final class AppServiceProvider extends ServiceProvider
         $this->app->bind(UpdateProductHandler::class, UpdateProductHandler::class);
         $this->app->bind(DeleteProductHandler::class, DeleteProductHandler::class);
         $this->app->bind(UploadProductImageHandler::class, UploadProductImageHandler::class);
+
+        // ─── Módulo Orders — repositórios ─────────────────────────────────────
+        $this->app->bind(CartRepositoryInterface::class, EloquentCartRepository::class);
+        $this->app->bind(OrderRepositoryInterface::class, EloquentOrderRepository::class);
+
+        // ─── Módulo Orders — handlers de Use Cases ────────────────────────────
+        $this->app->bind(GetCartHandler::class, GetCartHandler::class);
+        $this->app->bind(AddCartItemHandler::class, AddCartItemHandler::class);
+        $this->app->bind(UpdateCartItemHandler::class, UpdateCartItemHandler::class);
+        $this->app->bind(RemoveCartItemHandler::class, RemoveCartItemHandler::class);
+        $this->app->bind(ApplyCouponHandler::class, ApplyCouponHandler::class);
+        $this->app->bind(RemoveCouponHandler::class, RemoveCouponHandler::class);
+        $this->app->bind(CheckoutHandler::class, CheckoutHandler::class);
+        $this->app->bind(GetOrdersHandler::class, GetOrdersHandler::class);
     }
 
-    public function boot(): void {}
+    public function boot(): void
+    {
+        // Listener: OrderCreated → envia e-mail de confirmação
+        Event::listen(OrderCreated::class, function (OrderCreated $event): void {
+            dispatch(new SendOrderConfirmationEmail($event));
+        });
+    }
 }

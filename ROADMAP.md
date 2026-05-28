@@ -146,45 +146,67 @@ composer require filament/spatie-laravel-media-library-plugin:"^3.3"
 
 ---
 
-## FASE 3 — Carrinho e Checkout
+## FASE 3 — Carrinho e Checkout `[x]`
 
 > Objetivo: cliente consegue montar um pedido e finalizar a compra.
 
 ### 3.1 Modelo de dados
 
-- [ ] Migration `carts` (`id`, `session_id`, `user_id nullable`, `tenant_id`)
-- [ ] Migration `cart_items` (`id`, `cart_id`, `product_id`, `variant_id nullable`, `quantity`, `unit_price`)
-- [ ] Migration `orders` (`id`, `tenant_id`, `user_id`, `status`, `subtotal`, `discount`, `shipping_cost`, `total`, `payment_method`, `payment_status`, `notes`)
-- [ ] Migration `order_items` (espelho do cart_items no momento da compra)
-- [ ] Migration `order_status_history` (rastreamento de mudanças de status)
-- [ ] Migration `coupons` e `coupon_usages`
+- [x] Migration `coupons` (`id`, `tenant_id`, `code`, `type`, `value`, `min_order_value`, `max_uses`, `uses_count`, `expires_at`, `is_active`)
+- [x] Migration `carts` (`id`, `session_id nullable`, `user_id nullable`, `tenant_id`, `coupon_id nullable`)
+- [x] Migration `cart_items` (`id`, `cart_id`, `product_id`, `variant_id nullable`, `quantity`, `unit_price`)
+- [x] Migration `orders` (`id`, `tenant_id`, `user_id`, `status`, `subtotal`, `discount`, `shipping_cost`, `total`, `payment_method`, `payment_status`, `coupon_id nullable`, `notes`) com soft delete
+- [x] Migration `order_items` — snapshot de nome, sku, preço e quantidade no momento da compra
+- [x] Migration `order_status_history` — rastreamento de mudanças de status com `created_at`
+- [x] Migration `coupon_usages` — registro de cada uso de cupom por pedido
 
 ### 3.2 API de carrinho
 
-- [ ] `GET  /api/v1/cart` — carrinho atual (por session ou token)
-- [ ] `POST /api/v1/cart/items` — adicionar item
-- [ ] `PUT  /api/v1/cart/items/{id}` — atualizar quantidade
-- [ ] `DELETE /api/v1/cart/items/{id}` — remover item
-- [ ] `POST /api/v1/cart/coupon` — aplicar cupom
-- [ ] `DELETE /api/v1/cart/coupon` — remover cupom
+- [x] `GET  /api/v1/cart` — carrinho atual (por `X-Cart-Session` ou token Sanctum)
+- [x] `POST /api/v1/cart/items` — adicionar item (valida estoque e produto ativo)
+- [x] `PUT  /api/v1/cart/items/{id}` — atualizar quantidade (qty=0 remove o item)
+- [x] `DELETE /api/v1/cart/items/{id}` — remover item
+- [x] `POST /api/v1/cart/coupon` — aplicar cupom (valida código, expiração, uso mínimo, limite)
+- [x] `DELETE /api/v1/cart/coupon` — remover cupom
 
 ### 3.3 API de checkout
 
-- [ ] `POST /api/v1/checkout` — criar pedido a partir do carrinho (validar estoque, calcular totais, reservar estoque)
-- [ ] `GET  /api/v1/orders` — histórico de pedidos do cliente
-- [ ] `GET  /api/v1/orders/{id}` — detalhe do pedido
+- [x] `POST /api/v1/checkout` — criar pedido (valida estoque → cria Order + OrderItems → deduz estoque → aplica cupom → limpa carrinho)
+- [x] `GET  /api/v1/orders` — histórico de pedidos do cliente autenticado
+- [x] `GET  /api/v1/orders/{id}` — detalhe do pedido
 
 ### 3.4 Jobs e eventos
 
-- [ ] `OrderCreated` event → dispara `SendOrderConfirmationEmail`
-- [ ] `StockReserved` event → reduz estoque
-- [ ] Job de expiração de carrinhos abandonados (>24h)
+- [x] `OrderCreated` event → dispara `SendOrderConfirmationEmail` (log em dev, email em produção)
+- [x] Dedução de estoque síncrona e transacional no `CheckoutHandler` (dentro do `DB::transaction`)
+- [x] Job `ExpireAbandonedCarts` — remove carrinhos com `updated_at` > 24h; agendado via Schedule hourly
 
-### 3.5 Testes
+### 3.5 Carrinho anônimo + mesclagem
 
-- [ ] Teste: fluxo completo add-to-cart → checkout → pedido criado
-- [ ] Teste: checkout falha quando produto sem estoque
-- [ ] Teste: cupom inválido retorna 422
+- [x] Carrinho anônimo identificado pelo header `X-Cart-Session: {uuid}` (gerado pelo frontend)
+- [x] Carrinho autenticado vinculado ao `user_id`
+- [x] Mesclagem automática: quando usuário autenticado envia `X-Cart-Session`, o carrinho anônimo é fundido ao seu carrinho e apagado
+
+### 3.6 Cupons de desconto
+
+- [x] Tipos: `percent` (porcentagem) e `fixed` (valor fixo em centavos)
+- [x] Validações: ativo, não expirado, `max_uses` não atingido, `min_order_value` respeitado
+- [x] Aplicação registrada em `coupon_usages` + incremento de `uses_count` no checkout
+
+### 3.7 Testes — 30 testes passando (suite completa: 83 testes)
+
+- [x] Teste: visitante anônimo adiciona item via `X-Cart-Session`
+- [x] Teste: merge de carrinho anônimo ao autenticar
+- [x] Teste: atualizar e remover itens
+- [x] Teste: cupom percentual válido aplicado
+- [x] Teste: cupom expirado retorna 422
+- [x] Teste: cupom com valor mínimo não atingido retorna 422
+- [x] Teste: produto sem estoque retorna 422 ao adicionar ao carrinho
+- [x] Teste: fluxo completo checkout → pedido criado, estoque deduzido, carrinho limpo
+- [x] Teste: checkout falha quando produto sem estoque suficiente
+- [x] Teste: checkout com cupom aplica desconto corretamente no total
+- [x] Teste: histórico de pedidos do usuário autenticado
+- [x] Teste: checkout requer autenticação (401 sem token)
 
 ---
 
