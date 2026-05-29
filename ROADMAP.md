@@ -748,58 +748,58 @@ composer require filament/spatie-laravel-media-library-plugin:"^3.3"
 
 ---
 
-## FASE 13 — Agenda de Eventos e Cursos
+## FASE 13 — Agenda de Eventos e Cursos `[x]`
 
 > Objetivo: sellers e marketplaces publicam eventos e cursos; clientes se inscrevem e pagam
 > pelo fluxo de checkout já existente.
 
 ### 13.1 Modelo de dados
 
-- [ ] Migration `agenda_items`:
+- [x] Migration `agenda_items`:
   `id`, `tenant_id`, `seller_id` (nullable — do marketplace), `type` (evento|curso|workshop),
   `title`, `slug`, `description`, `short_description`, `featured_image_url`,
   `starts_at`, `ends_at`, `location` (nullable — online ou endereço físico),
   `slots` (nullable — sem limite), `slots_used`, `price_centavos` (0 = gratuito),
   `status` (draft|published|cancelled), soft delete
-- [ ] Migration `agenda_registrations`:
+- [x] Migration `agenda_registrations`:
   `id`, `agenda_item_id`, `user_id`, `order_id` (nullable — gratuito não gera Order),
   `status` (pending|confirmed|cancelled), `confirmed_at`
 
 ### 13.2 Regras de visibilidade
 
-- [ ] Evento de seller → sempre aparece na página do seller
-- [ ] Se `tenant.features.seller_events_on_marketplace = true` → aparece também na vitrine do marketplace
-- [ ] Configurável pelo dono do marketplace no painel do lojista
+- [x] Evento de seller → sempre aparece na página do seller
+- [x] Se `tenant.features.seller_events_on_marketplace = true` → aparece também na vitrine do marketplace
+- [x] Configurável pelo dono do marketplace no painel do lojista
 
 ### 13.3 API pública
 
-- [ ] `GET  /api/v1/agenda` — listagem de eventos/cursos do tenant (filtros: tipo, data, gratuito)
-- [ ] `GET  /api/v1/agenda/{slug}` — detalhe do evento
-- [ ] `POST /api/v1/agenda/{id}/register` — inscrição (autenticado); gratuito confirma direto, pago cria Order
+- [x] `GET  /api/v1/agenda` — listagem de eventos/cursos do tenant (filtros: tipo, data, gratuito)
+- [x] `GET  /api/v1/agenda/{slug}` — detalhe do evento
+- [x] `POST /api/v1/agenda/{id}/register` — inscrição (autenticado); gratuito confirma direto, pago cria Order
 
 ### 13.4 Storefront (Livewire)
 
-- [ ] `/loja/{slug}/agenda` — calendário/lista de eventos do tenant
-- [ ] `/loja/{slug}/agenda/{slug}` — detalhe + formulário de inscrição + pagamento
-- [ ] `/loja/{slug}/seller/{slug}/agenda` — agenda específica do seller
-- [ ] `AgendaCard` Livewire — card reutilizável com contagem de vagas em tempo real
-- [ ] Inscrição gratuita: confirma e envia e-mail imediatamente
-- [ ] Inscrição paga: redireciona para checkout existente (reusa `CheckoutForm`)
+- [x] `/loja/{slug}/agenda` — calendário/lista de eventos do tenant
+- [x] `/loja/{slug}/agenda/{slug}` — detalhe + formulário de inscrição + pagamento
+- [x] `/loja/{slug}/seller/{slug}/agenda` — agenda específica do seller
+- [x] `AgendaCard` Livewire — card reutilizável com contagem de vagas em tempo real
+- [x] Inscrição gratuita: confirma e envia e-mail imediatamente
+- [x] Inscrição paga: redireciona para checkout existente (reusa `CheckoutForm`)
 
 ### 13.5 Painel do Lojista (`/painel`)
 
-- [ ] `LojistaAgendaResource` — CRUD de eventos/cursos scoped ao tenant
-- [ ] Ação Publicar / Cancelar evento
-- [ ] Lista de inscrições por evento com status e dados do participante
-- [ ] Exportação CSV de inscritos
+- [x] `LojistaAgendaResource` — CRUD de eventos/cursos scoped ao tenant
+- [x] Ação Publicar / Cancelar evento
+- [x] Lista de inscrições por evento com status e dados do participante
+- [x] Exportação CSV de inscritos
 
 ### 13.6 Testes
 
-- [ ] Teste: evento publicado aparece na listagem pública
-- [ ] Teste: inscrição gratuita confirma imediatamente
-- [ ] Teste: evento com vagas esgotadas retorna 422 na inscrição
-- [ ] Teste: evento de seller não aparece no marketplace quando feature desabilitada
-- [ ] Teste: evento de seller aparece no marketplace quando feature habilitada
+- [x] Teste: evento publicado aparece na listagem pública
+- [x] Teste: inscrição gratuita confirma imediatamente
+- [x] Teste: evento com vagas esgotadas retorna 422 na inscrição
+- [x] Teste: evento de seller não aparece no marketplace quando feature desabilitada
+- [x] Teste: evento de seller aparece no marketplace quando feature habilitada
 
 ---
 
