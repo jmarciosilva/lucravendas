@@ -58,6 +58,20 @@ use App\Modules\Payments\Application\UseCases\CreatePixPayment\CreatePixPaymentH
 use App\Modules\Payments\Application\UseCases\ProcessWebhook\ProcessWebhookHandler;
 use App\Modules\Payments\Application\UseCases\RefundPayment\RefundPaymentHandler;
 use App\Modules\Payments\Domain\Contracts\PaymentGatewayInterface;
+use App\Modules\Catalog\Domain\Events\ProductCreated;
+use App\Modules\Marketing\Application\UseCases\AutoScheduleProductPost\AutoScheduleProductPostCommand;
+use App\Modules\Marketing\Application\UseCases\AutoScheduleProductPost\AutoScheduleProductPostHandler;
+use App\Modules\Marketing\Application\UseCases\ConnectAccount\ConnectAccountHandler;
+use App\Modules\Marketing\Application\UseCases\GetOAuthUrl\GetOAuthUrlHandler;
+use App\Modules\Marketing\Application\UseCases\PublishPost\PublishPostHandler;
+use App\Modules\Marketing\Application\UseCases\SchedulePost\SchedulePostHandler;
+use App\Modules\Marketing\Domain\Contracts\SocialGatewayInterface;
+use App\Modules\Marketing\Domain\Repositories\ScheduledPostRepositoryInterface;
+use App\Modules\Marketing\Domain\Repositories\SocialAccountRepositoryInterface;
+use App\Modules\Marketing\Infrastructure\Gateways\MetaGraphGateway;
+use App\Modules\Marketing\Infrastructure\Repositories\EloquentScheduledPostRepository;
+use App\Modules\Marketing\Infrastructure\Repositories\EloquentSocialAccountRepository;
+use App\Modules\Payments\Domain\Events\PaymentApproved;
 use App\Modules\Payments\Domain\Events\PaymentRejected;
 use App\Modules\Payments\Domain\Repositories\PaymentTransactionRepositoryInterface;
 use App\Modules\Payments\Infrastructure\Gateways\MercadoPagoGateway;
@@ -148,6 +162,16 @@ final class AppServiceProvider extends ServiceProvider
         $this->app->bind(CalculateShippingHandler::class, CalculateShippingHandler::class);
         $this->app->bind(GenerateLabelHandler::class, GenerateLabelHandler::class);
         $this->app->bind(ProcessTrackingWebhookHandler::class, ProcessTrackingWebhookHandler::class);
+
+        // ─── Módulo Marketing — gateway, repositórios e handlers ──────────────
+        $this->app->bind(SocialGatewayInterface::class, MetaGraphGateway::class);
+        $this->app->bind(SocialAccountRepositoryInterface::class, EloquentSocialAccountRepository::class);
+        $this->app->bind(ScheduledPostRepositoryInterface::class, EloquentScheduledPostRepository::class);
+        $this->app->bind(GetOAuthUrlHandler::class, GetOAuthUrlHandler::class);
+        $this->app->bind(ConnectAccountHandler::class, ConnectAccountHandler::class);
+        $this->app->bind(SchedulePostHandler::class, SchedulePostHandler::class);
+        $this->app->bind(PublishPostHandler::class, PublishPostHandler::class);
+        $this->app->bind(AutoScheduleProductPostHandler::class, AutoScheduleProductPostHandler::class);
     }
 
     public function boot(): void
@@ -167,6 +191,15 @@ final class AppServiceProvider extends ServiceProvider
             app(GenerateLabelHandler::class)->handle(
                 new \App\Modules\Shipping\Application\UseCases\GenerateLabel\GenerateLabelCommand($event->orderId)
             );
+        });
+
+        // Listener: ProductCreated → agenda post automático em todas as contas sociais ativas
+        Event::listen(ProductCreated::class, function (ProductCreated $event): void {
+            if (config('marketing.auto_post_on_product_created')) {
+                app(AutoScheduleProductPostHandler::class)->handle(
+                    new AutoScheduleProductPostCommand($event->product, $event->product->tenantId())
+                );
+            }
         });
     }
 }

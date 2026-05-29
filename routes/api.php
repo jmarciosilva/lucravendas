@@ -126,6 +126,29 @@ Route::prefix('v1')->name('api.v1.')->group(function (): void {
             ->name('seller.dashboard');
     });
 
+    // ─── Marketing — contas sociais e posts agendados ────────────────────────
+    Route::prefix('marketing')->name('marketing.')->group(function (): void {
+        // Pública: callback OAuth do Facebook/Instagram (sem auth, recebe redirect do Facebook)
+        Route::get('oauth/callback', [\App\Modules\Marketing\Presentation\Controllers\MarketingController::class, 'oauthCallback'])
+            ->name('oauth.callback');
+
+        Route::middleware('auth:sanctum')->group(function (): void {
+            // Retorna URL de autorização OAuth para o lojista redirecionar o browser
+            Route::get('connect/{platform}', [\App\Modules\Marketing\Presentation\Controllers\MarketingController::class, 'oauthUrl'])
+                ->name('connect');
+
+            // Contas sociais conectadas
+            Route::get('accounts', [\App\Modules\Marketing\Presentation\Controllers\MarketingController::class, 'accounts'])
+                ->name('accounts.index');
+
+            // Posts agendados
+            Route::get('posts', [\App\Modules\Marketing\Presentation\Controllers\MarketingController::class, 'listPosts'])
+                ->name('posts.index');
+            Route::post('posts', [\App\Modules\Marketing\Presentation\Controllers\MarketingController::class, 'schedulePost'])
+                ->name('posts.store');
+        });
+    });
+
     // ─── Carrinho — público (anônimo via X-Cart-Session ou autenticado) ───────
     Route::prefix('cart')->name('cart.')->group(function (): void {
         Route::get('/', [\App\Modules\Orders\Presentation\Controllers\CartController::class, 'show'])

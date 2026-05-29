@@ -398,14 +398,67 @@ composer require filament/spatie-laravel-media-library-plugin:"^3.3"
 
 ---
 
-## FASE 7 — LucraMarketing Nativo
+## FASE 7 — LucraMarketing Nativo `[x]`
 
-- [ ] Migration `social_accounts` (OAuth Instagram/Facebook)
-- [ ] Migration `scheduled_posts`
-- [ ] Integração com Meta Graph API
-- [ ] Job `PublishScheduledPost` (a cada hora via Schedule)
-- [ ] Geração automática de post ao publicar produto (`ProductCreated` event)
-- [ ] `POST /api/v1/marketing/posts` — agendar post manual
+> Objetivo: lojista conecta Instagram/Facebook via OAuth e o sistema agenda e publica posts automaticamente.
+
+### 7.1 Modelo de dados
+
+- [x] Migration `social_accounts` (`id`, `tenant_id`, `user_id`, `platform`, `account_id`, `account_name`, `access_token`, `token_expires_at`, `page_id`, `instagram_account_id`, `is_active`)
+- [x] Migration `scheduled_posts` (`id`, `tenant_id`, `social_account_id`, `product_id nullable`, `caption`, `image_url`, `platform`, `status`, `publish_at`, `published_at`, `external_post_id`, `error_message`)
+
+### 7.2 Gateway Meta Graph API (`MetaGraphGateway`)
+
+- [x] `SocialGatewayInterface` — contratos: `getOAuthUrl`, `exchangeCodeForToken`, `getAccountInfo`, `publishPost`
+- [x] `MetaGraphGateway` implementando a interface via API v19.0 (sandbox + produção)
+- [x] `getOAuthUrl()` — monta URL OAuth com scopes `pages_manage_posts`, `instagram_basic`, `instagram_content_publish`
+- [x] `exchangeCodeForToken()` — troca código por short-lived → long-lived token (~60 dias)
+- [x] `getAccountInfo()` — busca Page ID e Instagram Business Account ID vinculados
+- [x] `publishPost()` — Instagram (2 passos: media container → publish) e Facebook (POST /photos)
+- [x] Gateway mockável nos testes (mesmo padrão do `ShippingGatewayInterface`)
+- [x] `config/marketing.php` — configuração centralizada (`META_APP_ID`, `META_APP_SECRET`, `META_REDIRECT_URI`, `MARKETING_AUTO_POST`)
+
+### 7.3 API de marketing
+
+- [x] `GET  /api/v1/marketing/connect/{platform}` — retorna URL de autorização OAuth (auth)
+- [x] `GET  /api/v1/marketing/oauth/callback` — processa callback OAuth e persiste conta social (público)
+- [x] `GET  /api/v1/marketing/accounts` — lista contas conectadas do tenant (auth)
+- [x] `POST /api/v1/marketing/posts` — agendar post manual (auth)
+- [x] `GET  /api/v1/marketing/posts` — lista posts agendados do tenant (auth)
+
+### 7.4 Use Cases
+
+- [x] `GetOAuthUrlHandler` — gera URL OAuth com state codificado (tenantId + platform)
+- [x] `ConnectAccountHandler` — troca code por token, busca info da conta, persiste `SocialAccount`
+- [x] `SchedulePostHandler` — valida conta do tenant, cria `ScheduledPost` pendente
+- [x] `PublishPostHandler` — busca post/conta, chama gateway, atualiza status
+- [x] `AutoScheduleProductPostHandler` — ao criar produto, agenda post em todas as contas ativas (requer imagem)
+
+### 7.5 Job e eventos
+
+- [x] `PublishScheduledPost` — publica posts com `publish_at <= now()` e `status=pending`; agendado hourly via Schedule
+- [x] Listener `ProductCreated` → `AutoScheduleProductPostHandler` (controlado por `MARKETING_AUTO_POST`)
+- [x] Idempotência: job ignora posts já processados; handler pula produtos sem imagem
+
+### 7.6 Admin Filament (grupo **Marketing**)
+
+- [x] `SocialAccountResource` — tabela com badges de plataforma, toggle ativa, ação Desativar
+- [x] `ScheduledPostResource` — tabela com badges de status, filtros, ação Cancelar
+- [x] `MarketingStatsWidget` — contas conectadas, posts publicados (30d), posts pendentes/com falha
+
+### 7.7 Testes — 11 testes passando (suite completa: 127 testes)
+
+- [x] Teste: agendar post manualmente retorna 201
+- [x] Teste: agendar sem autenticação retorna 401
+- [x] Teste: `publish_at` no passado retorna 422
+- [x] Teste: conta de outro tenant retorna 422
+- [x] Teste: listagem retorna apenas posts do tenant correto
+- [x] Teste: job publica post pendente com `publish_at` vencido
+- [x] Teste: job marca como `failed` quando gateway lança exceção
+- [x] Teste: listener `ProductCreated` não cria post quando produto sem imagem (handler sai cedo)
+- [x] Teste: listener não agenda quando `MARKETING_AUTO_POST=false`
+- [x] Teste: OAuth URL retorna URL válida para plataforma válida
+- [x] Teste: plataforma inválida no OAuth retorna 422
 
 ---
 

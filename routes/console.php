@@ -14,3 +14,6 @@ Schedule::job(new ExpireAbandonedCarts)->hourly()->name('expire-abandoned-carts'
 
 // Processa repasses financeiros para sellers — executa toda segunda-feira às 9h
 Schedule::job(new \App\Jobs\ProcessPayoutJob)->weeklyOn(1, '9:00')->name('process-seller-payouts');
+
+// Publica posts agendados com publish_at vencido — executa a cada hora
+Schedule::job(new \App\Jobs\PublishScheduledPost)->hourly()->name('publish-scheduled-posts');
