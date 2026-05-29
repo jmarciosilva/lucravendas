@@ -530,6 +530,74 @@ composer require filament/spatie-laravel-media-library-plugin:"^3.3"
 
 ---
 
+## FASE 10 — Painel do Lojista (Filament)
+
+> Objetivo: lojistas gerenciam sua própria loja sem depender do super_admin.
+> Segundo painel Filament no mesmo projeto (`/painel`), restrito a `tenant_admin`,
+> com todos os Resources escopados automaticamente ao `tenant_id` do usuário autenticado.
+
+### 10.1 Fundação do painel
+
+- [ ] `LojistaPanelProvider` — path `/painel`, guard `web`, role `tenant_admin`
+- [ ] Acesso restrito: `auth()->user()->hasRole('tenant_admin')`
+- [ ] `app/Modules/Lojista/Presentation/Resources/` — diretório exclusivo (Resources não compartilhados com `/admin`)
+- [ ] Scoping global: todos os Resources filtram por `auth()->user()->tenant_id`
+- [ ] Tema e branding diferenciado do painel super_admin
+- [ ] Widget `LojistaOverviewWidget` — GMV do dia/mês, pedidos pendentes, estoque baixo, posts agendados
+
+### 10.2 Catálogo
+
+- [ ] `LojistaProdutoResource` — CRUD completo de produtos (scoped ao tenant)
+- [ ] Upload de imagens com preview (via Spatie Medialibrary, mesmo padrão do admin)
+- [ ] Gestão de variantes inline
+- [ ] `LojistaCategoriaResource` — CRUD de categorias com suporte a hierarquia
+- [ ] Importação via planilha (botão "Importar Planilha" — mesmo importer existente)
+
+### 10.3 Pedidos
+
+- [ ] `LojistaPedidoResource` — listagem com filtros por status e data
+- [ ] Página de detalhe: itens, valor, endereço de entrega, histórico de status
+- [ ] Ações: Confirmar, Processar, Marcar como Enviado, Marcar como Entregue, Cancelar
+- [ ] Exibir `tracking_code` e link para `shipping_label_url` quando disponível
+- [ ] Badge de status do pagamento (pendente, pago, falhou, estornado)
+
+### 10.4 Clientes
+
+- [ ] `LojistaClienteResource` — usuários com role `customer` vinculados ao tenant
+- [ ] Dados: nome, e-mail, telefone, data do cadastro, total de pedidos, valor acumulado
+
+### 10.5 Cupons
+
+- [ ] `LojistaCupomResource` — CRUD completo de cupons (percent e fixed)
+- [ ] Campos: código, tipo, valor, valor mínimo, limite de usos, expiração, status
+
+### 10.6 Frete
+
+- [ ] `LojistaZonaFreteResource` — CRUD de zonas por UF (27 estados, CheckboxList)
+- [ ] `LojistaTarifaFreteResource` — CRUD de tarifas com frete grátis configurável
+- [ ] Campo `origin_zipcode` editável nas configurações da loja
+
+### 10.7 Marketing
+
+- [ ] `LojistaContaSocialResource` — contas Instagram/Facebook conectadas
+- [ ] `LojistaPostAgendadoResource` — posts com badges de status, ação Cancelar
+- [ ] Toggle `MARKETING_AUTO_POST` configurável por loja
+
+### 10.8 Configurações da loja
+
+- [ ] Página `/painel/configuracoes` — edição de perfil da loja
+- [ ] Campos: nome, slug, CEP de origem (frete), dados bancários para repasse (bank_info JSON)
+- [ ] Upload de logo da loja
+
+### 10.9 Testes
+
+- [ ] Teste: lojista só vê dados do seu próprio tenant (isolamento)
+- [ ] Teste: lojista não acessa `/admin`
+- [ ] Teste: super_admin não acessa `/painel` (redirect correto)
+- [ ] Testes de CRUD de produto e pedido scoped ao tenant
+
+---
+
 ## FASE 9 — Go-live e Infraestrutura
 
 - [ ] Configurar servidor (AWS EC2 / Hetzner VPS)

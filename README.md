@@ -7,7 +7,12 @@
 
 ## Visão geral
 
-O LucraVendas é uma API REST construída em Laravel 12 que alimenta lojas online individuais e um marketplace multi-seller. Cada loja é um **tenant isolado**, com catálogo, pedidos e clientes próprios. O painel administrativo (Filament v3) permite que os gestores da LucraOne gerenciem tenants, planos, importações em massa, usuários e métricas consolidadas da plataforma.
+O LucraVendas é uma plataforma de ecommerce e marketplace construída em Laravel 12. Cada loja é um **tenant isolado** com catálogo, pedidos e clientes próprios.
+
+O projeto entrega três camadas:
+- **API REST** (`/api/v1/`) — consome dados do catálogo, processa pedidos, pagamentos, frete e marketing
+- **Painel Super Admin** (`/admin`) — gestores da LucraOne gerenciam tenants, planos, usuários e métricas consolidadas
+- **Painel do Lojista** (`/painel`) — cada lojista (`tenant_admin`) gerencia sua própria loja de forma autônoma, com todos os dados escopados ao seu tenant
 
 ---
 
@@ -117,7 +122,8 @@ docker compose exec app php artisan filament:assets
 ```
 app/
 ├── Modules/
-│   ├── Admin/           # painel Filament — gestão da plataforma
+│   ├── Admin/           # painel super_admin (/admin) — gestão da plataforma
+│   ├── Lojista/         # painel lojista (/painel) — gestão da loja própria
 │   ├── Catalog/         # produtos, categorias, variações, estoque, importação
 │   ├── Marketing/       # LucraMarketing nativo (posts, agendamento)
 │   ├── Marketplace/     # multi-seller, comissões, vitrines
@@ -125,10 +131,8 @@ app/
 │   ├── Payments/        # Mercado Pago: PIX, cartão, boleto, webhook, estorno
 │   ├── Shipping/        # cálculo de frete, integrações
 │   └── Tenant/          # gestão de lojas, usuários, autenticação
-├── Shared/
-│   ├── Traits/
-│   ├── ValueObjects/
-│   └── Helpers/
+├── Support/
+│   └── CacheKeys.php    # helper de chaves e TTLs de cache
 database/
 │   ├── migrations/
 │   └── seeders/
@@ -289,33 +293,60 @@ POST   /api/v1/marketing/posts                 # agendar post manual
 
 ---
 
-## Painel Admin
+## Painéis de gestão
 
-Acesso em `http://localhost:8000/admin`.
+### Painel Super Admin — `/admin`
+
+Acesso exclusivo para a equipe da LucraOne (role `super_admin`).
 
 ```
+URL:    http://localhost:8000/admin
 Email:  jmarciosilva@gmail.com
 Senha:  12345678
 ```
 
 > Altere imediatamente em produção.
 
-### Funcionalidades disponíveis
-
 | Módulo | Funcionalidades |
 |---|---|
 | **Tenants** | CRUD de lojas, planos (free/starter/growth/enterprise), status |
-| **Produtos** | CRUD completo, upload de imagens, gestão de variantes, widget de estoque baixo |
-| **Categorias** | CRUD com hierarquia (categorias pai/filho), ordenação |
-| **Usuários** | CRUD com roles, máscara de telefone, formatação automática de nome |
-| **Importação** | Upload de planilha CSV/XLSX para categorias, produtos e usuários em massa |
-| **Financeiro** | Listagem de transações (PIX/Cartão/Boleto), badges de status, ação de estorno com confirmação |
-| **Marketplace** | Aprovação/suspensão de sellers, comissões por item, repasses (payouts), widget GMV |
-| **Frete** | CRUD de zonas por UF (27 estados), tarifas com frete grátis configurável por valor mínimo |
-| **Marketing** | Contas sociais conectadas (Instagram/Facebook), posts agendados, widget de métricas |
-| **Plataforma** | Widget Horizon (jobs pendentes/processados/falhos), widget de stats gerais da plataforma |
+| **Produtos** | CRUD completo com upload de imagens, variantes, widget de estoque baixo |
+| **Categorias** | CRUD com hierarquia pai/filho, ordenação |
+| **Usuários** | CRUD com roles, máscara de telefone, formatação de nome |
+| **Importação** | Planilha CSV/XLSX para categorias, produtos e usuários em massa |
+| **Financeiro** | Transações (PIX/Cartão/Boleto), badges, ação de estorno com confirmação |
+| **Marketplace** | Aprovação/suspensão de sellers, comissões, repasses (payouts), widget GMV |
+| **Frete** | Zonas por UF (27 estados), tarifas com frete grátis configurável |
+| **Marketing** | Contas sociais conectadas, posts agendados, widget de métricas |
+| **Plataforma** | Widget Horizon (filas), widget de stats gerais da plataforma |
 
-### Importação via planilha
+---
+
+### Painel do Lojista — `/painel` *(em desenvolvimento — Fase 10)*
+
+Acesso exclusivo para o dono de cada loja (role `tenant_admin`). Cada lojista vê **apenas os dados do seu próprio tenant** — o escopo é aplicado automaticamente em todos os Resources.
+
+```
+URL:    http://localhost:8000/painel
+Email:  (e-mail do tenant_admin criado via API ou importação)
+Senha:  (senha definida no cadastro)
+```
+
+| Módulo | Funcionalidades previstas |
+|---|---|
+| **Dashboard** | GMV do dia/mês, pedidos pendentes, estoque baixo, posts agendados |
+| **Produtos** | CRUD completo scoped ao tenant, upload de imagens, variantes, importação |
+| **Categorias** | CRUD com hierarquia scoped ao tenant |
+| **Pedidos** | Listagem, detalhe, atualização de status, etiqueta de envio, rastreio |
+| **Clientes** | Usuários que compraram na loja, histórico de pedidos |
+| **Cupons** | CRUD completo de cupons percent/fixed |
+| **Frete** | Zonas e tarifas scoped ao tenant, CEP de origem |
+| **Marketing** | Contas sociais e posts agendados scoped ao tenant |
+| **Configurações** | Perfil da loja: nome, logo, CEP, dados bancários |
+
+---
+
+### Importação via planilha (painel super_admin)
 
 O painel suporta importação em massa com:
 - Seletor de loja (tenant) antes do upload
@@ -384,6 +415,7 @@ O projeto segue **Domain-Driven Design (DDD)**:
 | 6 | Frete e logística (Melhor Envio, tarifas internas, rastreio) | Concluída |
 | 7 | LucraMarketing nativo (Instagram/Facebook via Meta Graph API) | Concluída |
 | 8 | Observabilidade e performance (Sentry, Horizon, cache, rate limiting, backup) | Concluída |
+| 10 | Painel do Lojista — Filament `/painel` com escopo por tenant | Em andamento |
 | 9 | Go-live e infraestrutura | Pendente |
 
 ---

@@ -207,15 +207,27 @@ docker compose logs -f app
 | MySQL | `localhost:3306` | Banco de dados (cliente externo) |
 | Redis | `localhost:6379` | Cache, filas e sessões |
 
-### Credenciais padrão do painel admin
+### Credenciais e URLs dos painéis
+
+**Painel Super Admin** — gestão da plataforma LucraOne
 
 ```
 URL:    http://localhost:8000/admin
+Role:   super_admin
 Email:  jmarciosilva@gmail.com
 Senha:  12345678
 ```
 
-> Nunca use essas credenciais em produção.
+**Painel do Lojista** — gestão da loja própria *(Fase 10 — em desenvolvimento)*
+
+```
+URL:    http://localhost:8000/painel
+Role:   tenant_admin
+Email:  (e-mail do lojista criado via API ou importação)
+Senha:  (senha definida no cadastro)
+```
+
+> Nunca use as credenciais padrão em produção. O lojista só enxerga dados do seu próprio tenant.
 
 ---
 
@@ -601,6 +613,13 @@ tests/
 - **Padrão de código:** PSR-12 verificado com Laravel Pint. Rode `./vendor/bin/pint` antes de commitar.
 - **Branches:** crie a partir de `develop` com prefixo `feature/`, `fix/` ou `chore/`.
 - **Testes:** toda funcionalidade nova deve ter testes antes do Pull Request.
+
+### Painel do Lojista — convenções específicas (Fase 10)
+
+- **Localização dos Resources:** `app/Modules/Lojista/Presentation/Resources/` — separados dos Resources do painel Admin.
+- **Escopo obrigatório:** todo Resource do painel lojista deve sobrescrever `getEloquentQuery()` filtrando por `auth()->user()->tenant_id`. Nenhum dado de outro tenant pode vazar.
+- **Nenhum Use Case novo:** o painel lojista consome os mesmos Models Eloquent e Use Cases existentes — apenas apresenta com escopo diferente.
+- **Nomenclatura:** prefixo `Lojista` nos Resources (ex: `LojistaProdutoResource`), para distinguir dos Resources do admin sem conflito de classe.
 
 ---
 
