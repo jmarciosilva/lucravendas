@@ -259,7 +259,7 @@ php artisan test
 docker compose exec app php artisan test
 ```
 
-Resultado esperado: **133 testes passando**, 0 falhas.
+Resultado esperado: **145 testes passando**, 0 falhas.
 
 ### Executar por suite
 
@@ -317,6 +317,7 @@ php artisan test tests/Feature/Storefront/
 | Feature | `tests/Feature/Shipping/TrackingWebhookTest.php` | Atualização de tracking, transição delivered, tracking inexistente |
 | Feature | `tests/Feature/Marketing/SchedulePostTest.php` | Agendamento manual, rate limiting, conta de outro tenant, job de publicação, listener ProductCreated |
 | Feature | `tests/Feature/Storefront/StorefrontTest.php` | Home da loja, slug inválido, catálogo público, adicionar ao carrinho (Livewire), carrinho com itens |
+| Feature | `tests/Feature/Storefront/ProfilesAndThemesTest.php` | feature(), isMarketplace(), theme(), resolução de tema no ViewFinder, fallback e prioridade de views |
 
 ---
 
@@ -605,7 +606,8 @@ tests/
 │   │   ├── CheckoutWithShippingTest.php  # Endereço persistido, custo aplicado
 │   │   └── TrackingWebhookTest.php       # Atualização tracking, delivered, inexistente
 │   ├── Storefront/
-│   │   └── StorefrontTest.php            # Home, slug inválido, catálogo, Livewire carrinho
+│   │   ├── StorefrontTest.php            # Home, slug inválido, catálogo, Livewire carrinho
+│   │   └── ProfilesAndThemesTest.php     # feature(), theme(), isMarketplace(), ViewFinder
 │   └── ExampleTest.php
 └── Unit/
     ├── Catalog/
@@ -654,10 +656,13 @@ tests/
 
 ### Perfis e Feature Flags — convenções (Fase 12+)
 
-- **Feature flags:** verificadas com `$tenant->feature('agenda')` — retorna `bool` lendo `tenant.data['features']`.
-- **Tema visual:** resolvido pelo middleware — prepend no ViewFinder com `themes/{$tenant->theme()}/`; fallback automático para `themes/generico/`.
+- **Feature flags:** verificadas com `$tenant->feature('agenda')` — retorna `bool`. Prioridade: valor explícito em `tenant.data['features']` → padrão do perfil em `config/storefront.php`.
+- **Leitura do data JSON:** stancl/tenancy sobrescreve o accessor `$tenant->data` retornando NULL. Use sempre `$tenant->tenantData()` (que chama `getRawOriginal('data')`) para ler features e tema.
+- **Escrita no data JSON:** use `$tenant->saveTenantData(['features' => [...]])` — persiste via `DB::table` contornando a serialização customizada do stancl. Nunca use `$tenant->update(['data' => ...])` diretamente.
+- **Tema visual:** resolvido no middleware via `prependLocation()` + `flush()` no ViewFinder. Views de tema em `resources/views/storefront/themes/{tema}/storefront/`. Fallback automático para views base quando o tema não tem a view.
 - **Tema vs. Perfil:** são independentes — `profile` define os módulos ativos por padrão; `theme` define o visual. Um tenant pode ter `profile=esoterismo` com `theme=generico`.
-- **Módulos condicionais:** controllers e views verificam `$lojaAtual->feature('x')` antes de renderizar seções. Rotas condicionais são registradas somente se o feature estiver ativo no tenant.
+- **Módulos condicionais:** controllers e views verificam `$lojaAtual->feature('x')` antes de renderizar seções.
+- **Filament + data JSON:** use `mutateFormDataBeforeFill` / `mutateFormDataBeforeSave` nas Pages de edição para extrair/serializar features do data JSON — não use `data.features.key` como nome de campo Filament (dot notation não funciona com o campo `data` do stancl).
 
 ---
 
@@ -698,3 +703,23 @@ php artisan migrate:fresh --seed
 ```bash
 php artisan serve --port=8001
 ```
+
+**`$tenant->data` retorna NULL (stancl/tenancy)**
+
+O stancl/tenancy v3 sobrescreve o accessor do campo `data`, fazendo `$tenant->data` retornar NULL mesmo com dados no banco. Isso é esperado — use os helpers do TenantModel:
+
+```php
+// ✗ Errado — retorna NULL
+$tenant->data['features']['agenda'];
+
+// ✓ Correto — lê o JSON bruto via getRawOriginal()
+$tenant->tenantData()['features']['agenda'] ?? false;
+$tenant->feature('agenda'); // helper pronto com fallback para defaults do perfil
+
+// ✓ Para salvar features
+$tenant->saveTenantData(['features' => ['agenda' => true]]);
+```
+
+**Tema visual não está sendo aplicado (prioridade de views)**
+
+Quando uma view de tema existe mas não está sendo usada, pode ser cache do ViewFinder em memória (comum em testes ou ao usar Laravel Octane). O middleware já chama `flush()` após `prependLocation()`. Se o problema persistir em testes, adicione `view()->getFinder()->flush()` explicitamente antes da asserção.

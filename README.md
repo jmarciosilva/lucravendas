@@ -356,7 +356,7 @@ Senha:  12345678
 
 | Módulo | Funcionalidades |
 |---|---|
-| **Tenants** | CRUD de lojas, planos (free/starter/growth/enterprise), status |
+| **Tenants** | CRUD de lojas, planos, status, perfil de negócio, tema visual e feature flags |
 | **Produtos** | CRUD completo com upload de imagens, variantes, widget de estoque baixo |
 | **Categorias** | CRUD com hierarquia pai/filho, ordenação |
 | **Usuários** | CRUD com roles, máscara de telefone, formatação de nome |
@@ -390,7 +390,7 @@ Senha:  (senha definida no cadastro)
 | **Cupons** | CRUD completo percent/fixed |
 | **Frete** | Zonas e tarifas scoped, CEP de origem |
 | **Marketing** | Contas sociais e posts agendados scoped |
-| **Configurações** | Nome da loja e CEP de origem |
+| **Configurações** | Nome, CEP de origem e toggles de módulos da vitrine (feature flags) |
 
 ---
 
@@ -454,7 +454,7 @@ php artisan test --testsuite=Feature
 php artisan test --coverage
 ```
 
-127 testes passando. Os testes usam SQLite em memória — independentes do banco principal.
+145 testes passando. Os testes usam SQLite em memória — independentes do banco principal.
 Os gateways externos (Mercado Pago, Melhor Envio, Meta Graph API) são **mockados** nos testes — nenhuma chamada real é feita às APIs externas.
 
 ---
@@ -498,7 +498,7 @@ O projeto segue **Domain-Driven Design (DDD)**:
 | 8 | Observabilidade e performance (Sentry, Horizon, cache, rate limiting, backup) | ✅ Concluída |
 | 10 | Painel do Lojista — Filament `/painel` com escopo por tenant | ✅ Concluída |
 | 11 | Vitrine do Cliente — Livewire + Alpine.js + Blade (`/loja/{slug}/`) | ✅ Concluída |
-| 12 | Perfis de tenant, feature flags e sistema de temas visuais | 🔲 Planejada |
+| 12 | Perfis de tenant, feature flags e sistema de temas visuais | ✅ Concluída |
 | 13 | Agenda de eventos e cursos com inscrição paga | 🔲 Planejada |
 | 14 | Blog e conteúdo editorial (SEO, categorias, tags) | 🔲 Planejada |
 | 15 | Social layer: reviews, depoimentos e feed de clientes | 🔲 Planejada |

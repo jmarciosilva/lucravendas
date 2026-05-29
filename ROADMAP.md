@@ -660,23 +660,22 @@ composer require filament/spatie-laravel-media-library-plugin:"^3.3"
 
 ---
 
-## FASE 12 — Perfis, Feature Flags e Temas
+## FASE 12 — Perfis, Feature Flags e Temas `[x]`
 
 > Objetivo: fundação para tudo que vem nas fases 13-16. Define o que cada tipo de loja/marketplace
 > pode fazer e qual visual apresenta — sem alterar o código, apenas via configuração do tenant.
 
 ### 12.1 Perfis de tenant
 
-- [ ] Campo `profile` adicionado à tabela `tenants` (string, default `generico`)
-- [ ] Enum de perfis de **marketplace**: `esoterismo`, `artesanato_marketplace`, `cursos`, `produtos_diversos`
-- [ ] Enum de perfis de **loja individual**: `loja_artesanato`, `loja_roupas`, `loja_armarinhos`, `loja_eletronicos`, `generico`
-- [ ] Migration `add_profile_to_tenants_table`
+- [x] Campo `profile` adicionado à tabela `tenants` (string, default `generico`)
+- [x] Enum de perfis de **marketplace**: `esoterismo`, `artesanato_marketplace`, `cursos`, `produtos_diversos`
+- [x] Enum de perfis de **loja individual**: `loja_artesanato`, `loja_roupas`, `loja_armarinhos`, `loja_eletronicos`, `generico`
+- [x] Migration `add_profile_to_tenants_table`
 
 ### 12.2 Feature flags (tenant.data JSON — campo já existe)
 
 ```json
 {
-  "profile": "esoterismo",
   "theme": "esoterismo",
   "features": {
     "agenda":                        true,
@@ -689,10 +688,14 @@ composer require filament/spatie-laravel-media-library-plugin:"^3.3"
 }
 ```
 
-- [ ] Helper `$tenant->feature(string $key): bool` no `TenantModel`
-- [ ] Helper `$tenant->isMarketplace(): bool`
-- [ ] Helper `$tenant->profile(): string`
-- [ ] Painel do Lojista (`/painel`) — página de configurações exibe e persiste feature flags
+- [x] Helper `$tenant->feature(string $key): bool` no `TenantModel`
+- [x] Helper `$tenant->isMarketplace(): bool`
+- [x] Helper `$tenant->profile(): string`
+- [x] Helper `$tenant->theme(): string`
+- [x] Helper `$tenant->tenantData(): array` — lê JSON bruto via `getRawOriginal('data')` (stancl retorna NULL para `$tenant->data`)
+- [x] Helper `$tenant->saveTenantData(array): void` — persiste via `DB::table` contornando serialização do stancl
+- [x] `config/storefront.php` — mapa de 9 perfis com feature flags e temas padrão
+- [x] Painel do Lojista (`/painel`) — seção "Módulos da Vitrine" com toggles por feature
 
 ### 12.3 Matrix de features por perfil (padrão — sobrescrevível por tenant)
 
@@ -704,37 +707,44 @@ composer require filament/spatie-laravel-media-library-plugin:"^3.3"
 | Posts de clientes (social) | ✓ | ✓ | — | ✓ | — | — | — | — |
 | Avaliações (reviews) | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ |
 | Multi-seller (marketplace) | ✓ | ✓ | ✓ | ✓ | — | — | — | — |
-| Variantes de tamanho | — | — | — | ✓ | — | ✓ | ✓ | — |
-| Especificações técnicas | — | — | — | ✓ | — | — | — | ✓ |
 
 ### 12.4 Sistema de temas visuais
 
-- [ ] Estrutura de diretórios de temas:
+- [x] Estrutura de diretórios de temas criada (placeholders para Fase 16):
   ```
   resources/views/storefront/themes/
-      generico/          ← atual (fallback obrigatório)
-      esoterismo/        ← roxos, dourados, misticismo
-      artesanato/        ← tons terrosos, textura orgânica
-      cursos/            ← limpo, foco em CTAs de inscrição
-      roupas/            ← moda, foco em fotos grandes
-      armarinhos/        ← tons neutros, organização por seção
-      eletronicos/       ← azul/cinza, specs, comparativos
+      esoterismo/storefront/   ← placeholder (views específicas virão na Fase 16)
+      artesanato/storefront/
+      cursos/storefront/
+      roupas/storefront/
+      armarinhos/storefront/
+      eletronicos/storefront/
   ```
-- [ ] `IdentificarTenantPorSlug` resolve o tema → prepend no ViewFinder com o diretório do tema
-- [ ] Fallback automático para `themes/generico/` se a view do tema não existir
-- [ ] `theme` pode ser diferente de `profile` (loja de roupas pode usar tema genérico)
+- [x] `IdentificarTenantPorSlug` resolve o tema → `prependLocation()` no ViewFinder + `flush()` para evitar cache
+- [x] Fallback automático: se view do tema não existir, usa views base em `resources/views/storefront/`
+- [x] `theme` pode ser diferente de `profile` — configurável independentemente
 
 ### 12.5 Admin (`/admin`) — gestão de perfis
 
-- [ ] Campo `profile` e `theme` no `TenantResource` (selects)
-- [ ] Campo de feature flags (toggle list) na página de edição do tenant
-- [ ] Widget de resumo de perfis no dashboard admin
+- [x] Campo `profile` (select com label) e `theme_choice` (select de tema) no `TenantResource`
+- [x] Feature flags como toggles na seção "Feature Flags" — cada tenant pode sobrescrever os padrões do perfil
+- [x] Badge de perfil na tabela de tenants com filtro por perfil
+- [x] `EditTenant`: `mutateFormDataBeforeFill` e `mutateFormDataBeforeSave` para serialização correta via `saveTenantData()`
 
-### 12.6 Testes
+### 12.6 Testes — 12 testes passando (suite completa: 145 testes)
 
-- [ ] Teste: helper `feature()` retorna true/false conforme o JSON do tenant
-- [ ] Teste: middleware resolve tema correto e prepend ViewFinder
-- [ ] Teste: fallback para tema `generico` quando view do tema não existe
+- [x] Teste: `feature()` retorna padrão do perfil quando tenant não sobrescreve
+- [x] Teste: `feature()` retorna false para feature não habilitada no perfil
+- [x] Teste: `feature()` usa valor explícito do tenant quando definido (override true)
+- [x] Teste: `feature()` respeita override false mesmo quando perfil tem true
+- [x] Teste: `isMarketplace()` retorna true para perfis de marketplace
+- [x] Teste: `isMarketplace()` retorna false para perfis de loja individual
+- [x] Teste: `theme()` retorna tema padrão do perfil
+- [x] Teste: `theme()` usa tema customizado quando tenant define data.theme
+- [x] Teste: `theme()` retorna generico como fallback
+- [x] Teste: home carrega com tema generico (sem prepend)
+- [x] Teste: home carrega com tema esoterismo usando fallback (diretório sem views)
+- [x] Teste: view do tema tem prioridade sobre a view base quando existe
 
 ---
 
