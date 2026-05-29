@@ -2,6 +2,7 @@
 
 declare(strict_types=1);
 
+use App\Modules\Storefront\Presentation\Controllers\AgendaStorefrontController;
 use App\Modules\Storefront\Presentation\Controllers\AuthStorefrontController;
 use App\Modules\Storefront\Presentation\Controllers\CarrinhoController;
 use App\Modules\Storefront\Presentation\Controllers\CatalogoController;
@@ -52,6 +53,12 @@ Route::prefix('loja/{tenantSlug}')
             Route::get('/checkout', [CheckoutController::class, 'index'])->name('checkout');
             Route::get('/checkout/confirmacao/{orderId}', [CheckoutController::class, 'confirmacao'])
                 ->name('confirmacao');
+        });
+
+        // ─── Agenda (condicional por feature flag — verificado no controller) ───
+        Route::prefix('agenda')->name('agenda.')->group(function (): void {
+            Route::get('/', [AgendaStorefrontController::class, 'index'])->name('index');
+            Route::get('/{slug}', [AgendaStorefrontController::class, 'show'])->name('show');
         });
 
         // ─── Área do cliente (requer autenticação) ────────────────────────────

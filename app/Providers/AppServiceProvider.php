@@ -78,6 +78,12 @@ use App\Modules\Payments\Domain\Events\PaymentRejected;
 use App\Modules\Payments\Domain\Repositories\PaymentTransactionRepositoryInterface;
 use App\Modules\Payments\Infrastructure\Gateways\MercadoPagoGateway;
 use App\Modules\Payments\Infrastructure\Repositories\EloquentPaymentTransactionRepository;
+use App\Modules\Agenda\Application\UseCases\CancelAgendaItem\CancelAgendaItemHandler;
+use App\Modules\Agenda\Application\UseCases\CreateAgendaItem\CreateAgendaItemHandler;
+use App\Modules\Agenda\Application\UseCases\GetAgendaItem\GetAgendaItemHandler;
+use App\Modules\Agenda\Application\UseCases\ListAgendaItems\ListAgendaItemsHandler;
+use App\Modules\Agenda\Application\UseCases\PublishAgendaItem\PublishAgendaItemHandler;
+use App\Modules\Agenda\Application\UseCases\RegisterForEvent\RegisterForEventHandler;
 use App\Modules\Tenant\Application\UseCases\LoginUser\LoginUserHandler;
 use App\Modules\Tenant\Application\UseCases\RegisterUser\RegisterUserHandler;
 use Illuminate\Cache\RateLimiting\Limit;
@@ -168,6 +174,14 @@ final class AppServiceProvider extends ServiceProvider
         $this->app->bind(CalculateShippingHandler::class, CalculateShippingHandler::class);
         $this->app->bind(GenerateLabelHandler::class, GenerateLabelHandler::class);
         $this->app->bind(ProcessTrackingWebhookHandler::class, ProcessTrackingWebhookHandler::class);
+
+        // ─── Módulo Agenda — handlers de Use Cases ────────────────────────────
+        $this->app->bind(ListAgendaItemsHandler::class, ListAgendaItemsHandler::class);
+        $this->app->bind(GetAgendaItemHandler::class, GetAgendaItemHandler::class);
+        $this->app->bind(RegisterForEventHandler::class, RegisterForEventHandler::class);
+        $this->app->bind(CreateAgendaItemHandler::class, CreateAgendaItemHandler::class);
+        $this->app->bind(PublishAgendaItemHandler::class, PublishAgendaItemHandler::class);
+        $this->app->bind(CancelAgendaItemHandler::class, CancelAgendaItemHandler::class);
 
         // ─── Módulo Marketing — gateway, repositórios e handlers ──────────────
         $this->app->bind(SocialGatewayInterface::class, MetaGraphGateway::class);

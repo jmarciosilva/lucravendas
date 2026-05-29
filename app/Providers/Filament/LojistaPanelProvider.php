@@ -63,6 +63,7 @@ class LojistaPanelProvider extends PanelProvider
                 NavigationGroup::make('Clientes'),
                 NavigationGroup::make('Frete'),
                 NavigationGroup::make('Marketing'),
+                NavigationGroup::make('Agenda'),
                 NavigationGroup::make('Configurações'),
             ])
             ->middleware([

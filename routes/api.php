@@ -86,6 +86,10 @@ Route::prefix('v1')->name('api.v1.')->group(function (): void {
         // ─── Checkout ─────────────────────────────────────────────────────────
         Route::post('checkout', [\App\Modules\Orders\Presentation\Controllers\OrderController::class, 'checkout'])
             ->name('checkout');
+
+        // ─── Agenda — inscrição (requer autenticação) ──────────────────────────
+        Route::post('agenda/{id}/register', [\App\Modules\Agenda\Presentation\Controllers\AgendaController::class, 'register'])
+            ->name('agenda.register');
     });
 
     // ─── Pagamentos via Mercado Pago (requer autenticação) ───────────────────
@@ -145,6 +149,14 @@ Route::prefix('v1')->name('api.v1.')->group(function (): void {
             Route::post('posts', [\App\Modules\Marketing\Presentation\Controllers\MarketingController::class, 'schedulePost'])
                 ->name('posts.store');
         });
+    });
+
+    // ─── Agenda — rotas públicas (leitura sem autenticação) ─────────────────
+    Route::prefix('agenda')->name('agenda.')->middleware('throttle:api')->group(function (): void {
+        Route::get('/', [\App\Modules\Agenda\Presentation\Controllers\AgendaController::class, 'index'])
+            ->name('index');
+        Route::get('/{slug}', [\App\Modules\Agenda\Presentation\Controllers\AgendaController::class, 'show'])
+            ->name('show');
     });
 
     // ─── Carrinho — público (anônimo via X-Cart-Session ou autenticado) ───────
