@@ -13,9 +13,13 @@ use Symfony\Component\HttpFoundation\Response;
 /**
  * Identifica o tenant a partir do slug na URL (/loja/{tenantSlug}/).
  *
- * Vincula o TenantModel ao container de IoC e compartilha com todas as views,
- * permitindo que controllers e Livewire components acessem o tenant sem
- * precisar resolver novamente.
+ * Além de vincular o TenantModel ao container, resolve o tema visual do tenant
+ * e faz prepend no ViewFinder — views do tema têm prioridade sobre as views
+ * base, com fallback automático para o tema genérico (views existentes).
+ *
+ * Resolução de tema:
+ *   resources/views/storefront/themes/{tema}/storefront/home.blade.php  ← tema
+ *   resources/views/storefront/home.blade.php                           ← fallback
  */
 final class IdentificarTenantPorSlug
 {
@@ -36,6 +40,29 @@ final class IdentificarTenantPorSlug
         // Compartilha com todas as views da requisição
         View::share('lojaAtual', $tenant);
 
+        // Prepend do tema visual — apenas quando diferente do genérico
+        $this->resolverTema($tenant->theme());
+
         return $next($request);
+    }
+
+    private function resolverTema(string $theme): void
+    {
+        if ($theme === 'generico') {
+            return;
+        }
+
+        $themePath = resource_path("views/storefront/themes/{$theme}");
+
+        if (is_dir($themePath)) {
+            // Prepend faz o ViewFinder checar o diretório do tema ANTES das views base.
+            // Para view 'storefront.home', procura primeiro em:
+            //   {themePath}/storefront/home.blade.php
+            // e cai no fallback:
+            //   resources/views/storefront/home.blade.php
+            view()->getFinder()->prependLocation($themePath);
+            // Flush limpa resoluções cacheadas em memória (necessário em testes e Octane)
+            view()->getFinder()->flush();
+        }
     }
 }
