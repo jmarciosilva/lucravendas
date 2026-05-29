@@ -231,13 +231,15 @@ Email:  (e-mail do lojista criado via API ou importação)
 Senha:  (senha definida no cadastro)
 ```
 
-**Vitrine do Cliente** — loja pública *(Fase 11 — em desenvolvimento)*
+**Vitrine do Cliente** — loja pública
 
 ```
 URL:    http://localhost:8000/loja/{slug}/
 Acesso: público (sem autenticação para navegar)
 Slug:   slug do tenant (coluna slug da tabela tenants)
 ```
+
+> O tema visual e os módulos disponíveis dependem do `profile` e dos `features` configurados no tenant. O tema `generico` é o fallback para todos os perfis.
 
 > Nunca use as credenciais padrão em produção. O lojista só enxerga dados do seu próprio tenant.
 
@@ -257,7 +259,7 @@ php artisan test
 docker compose exec app php artisan test
 ```
 
-Resultado esperado: **127 testes passando**, 0 falhas.
+Resultado esperado: **133 testes passando**, 0 falhas.
 
 ### Executar por suite
 
@@ -286,6 +288,7 @@ php artisan test tests/Feature/Payments/PaymentTest.php
 php artisan test tests/Feature/Marketplace/
 php artisan test tests/Feature/Shipping/
 php artisan test tests/Feature/Marketing/
+php artisan test tests/Feature/Storefront/
 ```
 
 ### O que cada grupo de testes valida
@@ -313,6 +316,7 @@ php artisan test tests/Feature/Marketing/
 | Feature | `tests/Feature/Shipping/CheckoutWithShippingTest.php` | Endereço persistido, custo de frete aplicado na tarifa interna |
 | Feature | `tests/Feature/Shipping/TrackingWebhookTest.php` | Atualização de tracking, transição delivered, tracking inexistente |
 | Feature | `tests/Feature/Marketing/SchedulePostTest.php` | Agendamento manual, rate limiting, conta de outro tenant, job de publicação, listener ProductCreated |
+| Feature | `tests/Feature/Storefront/StorefrontTest.php` | Home da loja, slug inválido, catálogo público, adicionar ao carrinho (Livewire), carrinho com itens |
 
 ---
 
@@ -600,6 +604,8 @@ tests/
 │   │   ├── ShippingCalculateTest.php     # Cálculo interno, ME mockado, frete grátis
 │   │   ├── CheckoutWithShippingTest.php  # Endereço persistido, custo aplicado
 │   │   └── TrackingWebhookTest.php       # Atualização tracking, delivered, inexistente
+│   ├── Storefront/
+│   │   └── StorefrontTest.php            # Home, slug inválido, catálogo, Livewire carrinho
 │   └── ExampleTest.php
 └── Unit/
     ├── Catalog/
@@ -635,12 +641,23 @@ tests/
 
 ### Vitrine do Cliente — convenções (Fase 11)
 
-- **Identificação do tenant:** middleware `IdentificarTenantPorSlug` extrai `{slug}` da URL e disponibiliza o tenant via `request()->route('tenantSlug')`.
+- **Identificação do tenant:** middleware `IdentificarTenantPorSlug` extrai `{slug}` da URL e disponibiliza o tenant via `app()->instance('storefront.tenant', $tenant)`.
+- **Acesso ao tenant:** use `StorefrontContext::tenant()` e `StorefrontContext::tenantId()` — nunca acesse `request()->route()` dentro de componentes Livewire.
 - **Rotas:** em `routes/web.php` com prefixo `/loja/{tenantSlug}`.
-- **Livewire:** componentes em `app/Modules/Storefront/Presentation/Livewire/`.
-- **Views:** em `resources/views/storefront/` — layout base + páginas.
+- **Livewire:** componentes em `app/Modules/Storefront/Presentation/Livewire/`, registrados via `StorefrontServiceProvider` com aliases `storefront.*`.
+- **Views:** em `resources/views/storefront/` — layout base + páginas. A partir da Fase 16, o middleware faz prepend no ViewFinder para `themes/{tema}/`.
+- **tenantSlug em componentes:** passe como propriedade pública no `mount()` via `StorefrontContext::tenant()->slug` — nunca via `request()->route('tenantSlug')` (não disponível em testes Livewire).
 - **Reutilização:** Livewire chama os Use Cases existentes diretamente (ex: `CheckoutHandler`, `GetCartHandler`) — sem HTTP overhead.
 - **Carrinho anônimo:** usa `session()` com chave `cart_session_id` como substituto do header `X-Cart-Session` da API.
+- **Testes web:** use `$this->withoutVite()` (ou `beforeEach(fn () => test()->withoutVite())`) — o Vite exige `npm run build`, que não está disponível em CI/testes.
+- **Criação de tenant em testes:** use `DB::table('tenants')->insert(...)` em vez de `TenantModel::create()` — o stancl/tenancy serializa o campo `id` para o JSON `data` via Eloquent.
+
+### Perfis e Feature Flags — convenções (Fase 12+)
+
+- **Feature flags:** verificadas com `$tenant->feature('agenda')` — retorna `bool` lendo `tenant.data['features']`.
+- **Tema visual:** resolvido pelo middleware — prepend no ViewFinder com `themes/{$tenant->theme()}/`; fallback automático para `themes/generico/`.
+- **Tema vs. Perfil:** são independentes — `profile` define os módulos ativos por padrão; `theme` define o visual. Um tenant pode ter `profile=esoterismo` com `theme=generico`.
+- **Módulos condicionais:** controllers e views verificam `$lojaAtual->feature('x')` antes de renderizar seções. Rotas condicionais são registradas somente se o feature estiver ativo no tenant.
 
 ---
 

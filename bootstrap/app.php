@@ -16,6 +16,11 @@ return Application::configure(basePath: dirname(__DIR__))
     ->withMiddleware(function (Middleware $middleware): void {
         // Autenticação Sanctum aplicada por padrão a rotas de API protegidas
         $middleware->statefulApi();
+
+        // Alias do middleware de identificação de tenant para a vitrine
+        $middleware->alias([
+            'storefront.tenant' => \App\Modules\Storefront\Infrastructure\Http\Middleware\IdentificarTenantPorSlug::class,
+        ]);
     })
     ->withExceptions(function (Exceptions $exceptions): void {
         // Garante resposta JSON para erros de autenticação em rotas de API

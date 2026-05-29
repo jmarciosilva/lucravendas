@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Modules\Orders\Infrastructure\Models;
 
 use App\Models\User;
+use App\Modules\Payments\Infrastructure\Models\PaymentTransactionModel;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
@@ -52,5 +53,10 @@ class OrderModel extends Model
     public function user(): BelongsTo
     {
         return $this->belongsTo(User::class, 'user_id');
+    }
+
+    public function transactions(): HasMany
+    {
+        return $this->hasMany(PaymentTransactionModel::class, 'order_id');
     }
 }

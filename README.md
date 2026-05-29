@@ -1,13 +1,15 @@
 # LucraVendas — Backend API
 
-> Plataforma de Ecommerce e Marketplace para pequenos empreendedores brasileiros.
+> Plataforma de Comunidade e Comércio para pequenos empreendedores brasileiros.
 > Produto vertical da holding **LucraOne**.
 
 ---
 
 ## Visão geral
 
-O LucraVendas é uma plataforma de ecommerce e marketplace construída em Laravel 12. Cada loja é um **tenant isolado** com catálogo, pedidos e clientes próprios.
+O LucraVendas é uma plataforma de **comunidade com comércio integrado** construída em Laravel 12. Suporta lojas individuais e marketplaces temáticos — cada um com identidade visual, módulos e funcionalidades ativadas conforme o perfil do negócio.
+
+Cada loja ou marketplace é um **tenant isolado** com catálogo, pedidos, clientes, blog, agenda e feed social próprios.
 
 O projeto entrega quatro camadas no mesmo repositório Laravel:
 
@@ -19,6 +21,25 @@ O projeto entrega quatro camadas no mesmo repositório Laravel:
 | **Vitrine do Cliente** | `/loja/{slug}/` | Clientes finais (`customer`) |
 
 A vitrine é construída com **Livewire + Alpine.js** no mesmo projeto Laravel — server-rendered, SEO nativo, zero build separado.
+
+### Perfis de Marketplace
+
+| Perfil | Foco | Módulos ativos |
+|---|---|---|
+| **Esotérico** | Terapias alternativas, espiritualidade | Catálogo, Agenda, Blog, Social, Reviews |
+| **Artesanato** | Feiras e produtos artesanais | Catálogo, Agenda, Blog, Social, Reviews |
+| **Cursos Online** | Educação e capacitação | Agenda (inscrição paga), Blog, Reviews |
+| **Produtos Diversos** | Roupas, eletrônicos, mix | Catálogo, Social, Reviews |
+
+### Perfis de Loja Individual
+
+| Perfil | Foco | Diferenciais |
+|---|---|---|
+| **Artesanato** | Produtos artesanais | Agenda de workshops, Blog |
+| **Roupas** | Moda e vestuário | Variantes de tamanho/cor, Blog |
+| **Armarinhos** | Tecidos e aviamentos | Variantes, Blog (tutoriais de costura) |
+| **Eletrônicos** | Tecnologia e gadgets | Especificações técnicas, Blog (reviews) |
+| **Genérico** | Qualquer segmento | Base sem customizações verticais |
 
 ---
 
@@ -133,14 +154,18 @@ app/
 │   ├── Lojista/         # painel lojista (/painel) — gestão da loja própria
 │   ├── Storefront/      # vitrine do cliente (/loja/{slug}/) — Livewire + Blade
 │   ├── Catalog/         # produtos, categorias, variações, estoque, importação
-│   ├── Marketing/       # LucraMarketing nativo (posts, agendamento)
+│   ├── Marketing/       # LucraMarketing nativo (posts, agendamento social)
 │   ├── Marketplace/     # multi-seller, comissões, vitrines
 │   ├── Orders/          # carrinho, checkout, pedidos, status
 │   ├── Payments/        # Mercado Pago: PIX, cartão, boleto, webhook, estorno
 │   ├── Shipping/        # cálculo de frete, integrações
-│   └── Tenant/          # gestão de lojas, usuários, autenticação
+│   ├── Tenant/          # gestão de lojas, usuários, autenticação
+│   ├── Agenda/          # [Fase 13] eventos e cursos, inscrições, vagas
+│   ├── Blog/            # [Fase 14] posts editoriais, categorias, tags, SEO
+│   └── Social/          # [Fase 15] reviews, depoimentos, feed de clientes
 ├── Support/
-│   └── CacheKeys.php    # helper de chaves e TTLs de cache
+│   ├── CacheKeys.php    # helper de chaves e TTLs de cache
+│   └── StorefrontContext.php  # helper de contexto da vitrine (tenant, sessão)
 database/
 │   ├── migrations/
 │   └── seeders/
@@ -148,7 +173,17 @@ routes/
 │   ├── api.php          # rotas da API REST (/api/v1/)
 │   └── web.php          # rotas da vitrine (/loja/{slug}/)
 resources/views/
-│   ├── storefront/      # layouts e views Blade da vitrine
+│   ├── storefront/
+│   │   ├── themes/      # [Fase 16] temas visuais por perfil
+│   │   │   ├── generico/     ← fallback (atual)
+│   │   │   ├── esoterismo/
+│   │   │   ├── artesanato/
+│   │   │   ├── cursos/
+│   │   │   ├── roupas/
+│   │   │   ├── armarinhos/
+│   │   │   └── eletronicos/
+│   │   ├── layouts/     # layout base da vitrine
+│   │   └── livewire/    # views dos componentes Livewire
 │   └── filament/        # views customizadas dos painéis Filament
 tests/
 │   ├── Feature/
@@ -359,15 +394,17 @@ Senha:  (senha definida no cadastro)
 
 ---
 
-### Vitrine do Cliente — `/loja/{slug}/` *(em desenvolvimento — Fase 11)*
+### Vitrine do Cliente — `/loja/{slug}/`
 
-Loja pública acessível pelo cliente final. Construída com **Livewire + Alpine.js + Blade** no mesmo projeto Laravel — server-rendered e SEO nativo.
+Loja pública acessível pelo cliente final. Construída com **Livewire + Alpine.js + Blade** no mesmo projeto Laravel — server-rendered e SEO nativo. Suporta múltiplos **perfis visuais** (Fase 16) e módulos condicionais ativados por feature flags no tenant.
 
 ```
 URL (dev):    http://localhost:8000/loja/minha-loja/
 URL (prod):   minha-loja.lucravendas.com.br  (Fase 9)
               www.minha-loja.com.br           (Fase 9 — domínio próprio)
 ```
+
+**Módulos core (todos os perfis):**
 
 | Página | Descrição |
 |---|---|
@@ -378,6 +415,15 @@ URL (prod):   minha-loja.lucravendas.com.br  (Fase 9)
 | **Checkout** | Wizard: endereço → frete → pagamento (PIX/cartão/boleto) |
 | **Confirmação** | Resumo do pedido + instruções de pagamento |
 | **Minha Conta** | Login, registro, histórico de pedidos, rastreio |
+
+**Módulos condicionais (ativados por `tenant.features`):**
+
+| Página | Feature flag | Perfis padrão |
+|---|---|---|
+| **Agenda** `/loja/{slug}/agenda` | `agenda: true` | Esotérico, Artesanato, Cursos |
+| **Blog** `/loja/{slug}/blog` | `blog: true` | Todos exceto Produtos Diversos |
+| **Feed social** `/loja/{slug}/feed` | `social_posts: true` | Esotérico, Artesanato, Produtos Diversos |
+| **Reviews** na página do produto | `reviews: true` | Todos os perfis |
 
 ---
 
@@ -442,17 +488,22 @@ O projeto segue **Domain-Driven Design (DDD)**:
 
 | Fase | Descrição | Status |
 |---|---|---|
-| 1 | Fundação: setup, multi-tenancy, autenticação, painel admin base | Concluída |
-| 2 | Catálogo: produtos, categorias, API, importação via planilha | Concluída |
-| 3 | Carrinho e checkout | Concluída |
-| 4 | Pagamentos via Mercado Pago (PIX, cartão, boleto) | Concluída |
-| 5 | Marketplace multi-seller (sellers, comissões, repasses) | Concluída |
-| 6 | Frete e logística (Melhor Envio, tarifas internas, rastreio) | Concluída |
-| 7 | LucraMarketing nativo (Instagram/Facebook via Meta Graph API) | Concluída |
-| 8 | Observabilidade e performance (Sentry, Horizon, cache, rate limiting, backup) | Concluída |
-| 10 | Painel do Lojista — Filament `/painel` com escopo por tenant | Concluída |
-| 11 | Vitrine do Cliente — Livewire + Alpine.js + Blade (`/loja/{slug}/`) | Em andamento |
-| 9 | Go-live e infraestrutura | Pendente |
+| 1 | Fundação: setup, multi-tenancy, autenticação, painel admin base | ✅ Concluída |
+| 2 | Catálogo: produtos, categorias, API, importação via planilha | ✅ Concluída |
+| 3 | Carrinho e checkout | ✅ Concluída |
+| 4 | Pagamentos via Mercado Pago (PIX, cartão, boleto) | ✅ Concluída |
+| 5 | Marketplace multi-seller (sellers, comissões, repasses) | ✅ Concluída |
+| 6 | Frete e logística (Melhor Envio, tarifas internas, rastreio) | ✅ Concluída |
+| 7 | LucraMarketing nativo (Instagram/Facebook via Meta Graph API) | ✅ Concluída |
+| 8 | Observabilidade e performance (Sentry, Horizon, cache, rate limiting, backup) | ✅ Concluída |
+| 10 | Painel do Lojista — Filament `/painel` com escopo por tenant | ✅ Concluída |
+| 11 | Vitrine do Cliente — Livewire + Alpine.js + Blade (`/loja/{slug}/`) | ✅ Concluída |
+| 12 | Perfis de tenant, feature flags e sistema de temas visuais | 🔲 Planejada |
+| 13 | Agenda de eventos e cursos com inscrição paga | 🔲 Planejada |
+| 14 | Blog e conteúdo editorial (SEO, categorias, tags) | 🔲 Planejada |
+| 15 | Social layer: reviews, depoimentos e feed de clientes | 🔲 Planejada |
+| 16 | Temas visuais por perfil (7 temas) | 🔲 Planejada |
+| 9 | Go-live e infraestrutura (servidor, SSL, deploy, DNS wildcard) | 🔲 Planejada |
 
 ---
 

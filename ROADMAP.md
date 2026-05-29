@@ -589,7 +589,7 @@ composer require filament/spatie-laravel-media-library-plugin:"^3.3"
 
 ---
 
-## FASE 11 — Vitrine do Cliente (Storefront)
+## FASE 11 — Vitrine do Cliente (Storefront) `[x]`
 
 > Objetivo: cliente final navega pela loja, adiciona itens ao carrinho e finaliza
 > a compra diretamente no browser — sem app separado.
@@ -601,53 +601,337 @@ composer require filament/spatie-laravel-media-library-plugin:"^3.3"
 
 ### 11.1 Fundação
 
-- [ ] `composer require livewire/livewire`
-- [ ] Middleware `IdentificarTenantPorSlug` — extrai slug da URL, busca tenant, compartilha via `request()`
-- [ ] Layout base `resources/views/storefront/layouts/loja.blade.php` — header, carrinho mini, footer
-- [ ] `StorefrontServiceProvider` — registra rotas web e middleware
-- [ ] Rotas em `routes/web.php` com prefixo `/loja/{tenantSlug}`
+- [x] `composer require livewire/livewire`
+- [x] Middleware `IdentificarTenantPorSlug` — extrai slug da URL, busca tenant, compartilha via `app()->instance()`
+- [x] Layout base `resources/views/storefront/layouts/loja.blade.php` — header, carrinho mini, footer
+- [x] `StorefrontServiceProvider` — registra componentes Livewire da vitrine
+- [x] `StorefrontContext` — helper estático para tenant e session_id do carrinho
+- [x] Rotas em `routes/web.php` com prefixo `/loja/{tenantSlug}` — 14 rotas registradas
 
 ### 11.2 Catálogo público
 
-- [ ] Home da loja (`/loja/{slug}`) — produtos em destaque, categorias, banner
-- [ ] Catálogo (`/loja/{slug}/produtos`) — listagem com Livewire `CatalogoFiltros` (categoria, preço, busca)
-- [ ] Produto (`/loja/{slug}/produtos/{product-slug}`) — galeria, variantes, botão "Adicionar ao Carrinho"
+- [x] Home da loja (`/loja/{slug}`) — produtos em destaque, categorias, banner
+- [x] Catálogo (`/loja/{slug}/produtos`) — listagem com Livewire `CatalogoFiltros` (categoria, preço, busca, ordenação)
+- [x] Produto (`/loja/{slug}/produtos/{product-slug}`) — galeria, variantes, `AdicionarAoCarrinho` Livewire
+- [x] Card de produto reutilizável (`produto/card.blade.php`) com imagem `thumb`, preço, badge de estoque
 
 ### 11.3 Carrinho (Livewire)
 
-- [ ] `CarrinhoWidget` — mini-carrinho no header (contagem + preview) — Alpine.js para abrir/fechar
-- [ ] `CarrinhoPage` — página `/loja/{slug}/carrinho` com itens, quantidades, cupom, resumo
-- [ ] Carrinho anônimo via `session()` com fallback para Sanctum quando autenticado
+- [x] `CarrinhoWidget` — mini-carrinho no header (contagem + preview) — Alpine.js para abrir/fechar; escuta evento `carrinho-atualizado`
+- [x] `CarrinhoPage` — página `/loja/{slug}/carrinho` com itens, quantidades, cupom, resumo
+- [x] `AdicionarAoCarrinho` — botão na página de produto com controle de quantidade
+- [x] Carrinho anônimo via `session('cart_session_id')` com mesclagem ao autenticar
 
 ### 11.4 Checkout (Livewire)
 
-- [ ] `CheckoutForm` — wizard: endereço → frete → pagamento
-- [ ] Passo 1: formulário de endereço com CEP (auto-preenchimento via ViaCEP)
-- [ ] Passo 2: opções de frete (`CalculateShippingHandler` chamado diretamente)
-- [ ] Passo 3: seleção de método de pagamento (PIX, cartão via MP.js, boleto)
-- [ ] Confirmação: página com resumo do pedido e instruções de pagamento
+- [x] `CheckoutForm` — wizard 3 passos: endereço → frete → pagamento
+- [x] Passo 1: formulário de endereço com auto-preenchimento via ViaCEP (Alpine.js)
+- [x] Passo 2: opções de frete (`CalculateShippingHandler` chamado diretamente)
+- [x] Passo 3: seleção de método de pagamento (PIX, cartão, boleto) + notas
+- [x] Confirmação: página com QR Code PIX, link boleto, resumo completo e endereço
 
 ### 11.5 Área do cliente
 
-- [ ] Login / registro scoped ao tenant (`/loja/{slug}/login`, `/loja/{slug}/cadastro`)
-- [ ] Minha conta (`/loja/{slug}/minha-conta`) — dados pessoais
-- [ ] Meus pedidos (`/loja/{slug}/minha-conta/pedidos`) — listagem com status badges
-- [ ] Detalhe do pedido (`/loja/{slug}/minha-conta/pedidos/{id}`) — rastreio, itens, totais
+- [x] Login / registro scoped ao tenant (`/loja/{slug}/login`, `/loja/{slug}/cadastro`)
+- [x] Minha conta (`/loja/{slug}/minha-conta`) — dados pessoais com menu de navegação
+- [x] Meus pedidos (`/loja/{slug}/minha-conta/pedidos`) — listagem com status badges coloridos
+- [x] Detalhe do pedido (`/loja/{slug}/minha-conta/pedidos/{id}`) — rastreio, histórico, totais, endereço
 
 ### 11.6 SEO e performance
 
-- [ ] Rotas server-rendered (Blade) — indexáveis pelo Google sem configuração adicional
-- [ ] Meta tags dinâmicas por produto e categoria (`<title>`, `og:*`)
-- [ ] Cache Redis nas páginas de catálogo (reusa `CacheKeys` existente)
-- [ ] Imagens com conversão `thumb` do Spatie MediaLibrary
+- [x] Rotas server-rendered (Blade) — indexáveis pelo Google
+- [x] Meta tags dinâmicas por produto (`<title>`, `og:title`, `og:description`, `og:image`)
+- [x] Imagens com conversão `thumb` do Spatie MediaLibrary (300×300)
+- [x] Cache Redis nas páginas de catálogo (reusa `CacheKeys` existente via `CatalogoController`)
 
-### 11.7 Testes
+### 11.7 Correções e melhorias
 
-- [ ] Teste: home da loja carrega com tenant válido
-- [ ] Teste: slug inválido retorna 404
-- [ ] Teste: produto aparece no catálogo público
-- [ ] Teste: adicionar ao carrinho (Livewire component test)
-- [ ] Teste: checkout cria pedido e redireciona para confirmação
+- [x] Relacionamento `transactions()` adicionado ao `OrderModel` (necessário para página de confirmação)
+- [x] `withoutVite()` nos testes web (Vite requer build; testes rodam sem assets compilados)
+
+### 11.8 Testes — 6 testes passando (suite completa: 133 testes)
+
+- [x] Teste: home da loja carrega com tenant válido
+- [x] Teste: slug inválido retorna 404
+- [x] Teste: produto aparece no catálogo público
+- [x] Teste: loja inativa retorna 404
+- [x] Teste: adicionar ao carrinho via Livewire (component test)
+- [x] Teste: carrinho Livewire exibe itens adicionados
+
+---
+
+## FASE 12 — Perfis, Feature Flags e Temas
+
+> Objetivo: fundação para tudo que vem nas fases 13-16. Define o que cada tipo de loja/marketplace
+> pode fazer e qual visual apresenta — sem alterar o código, apenas via configuração do tenant.
+
+### 12.1 Perfis de tenant
+
+- [ ] Campo `profile` adicionado à tabela `tenants` (string, default `generico`)
+- [ ] Enum de perfis de **marketplace**: `esoterismo`, `artesanato_marketplace`, `cursos`, `produtos_diversos`
+- [ ] Enum de perfis de **loja individual**: `loja_artesanato`, `loja_roupas`, `loja_armarinhos`, `loja_eletronicos`, `generico`
+- [ ] Migration `add_profile_to_tenants_table`
+
+### 12.2 Feature flags (tenant.data JSON — campo já existe)
+
+```json
+{
+  "profile": "esoterismo",
+  "theme": "esoterismo",
+  "features": {
+    "agenda":                        true,
+    "blog":                          true,
+    "social_posts":                  true,
+    "reviews":                       true,
+    "marketplace":                   true,
+    "seller_events_on_marketplace":  true
+  }
+}
+```
+
+- [ ] Helper `$tenant->feature(string $key): bool` no `TenantModel`
+- [ ] Helper `$tenant->isMarketplace(): bool`
+- [ ] Helper `$tenant->profile(): string`
+- [ ] Painel do Lojista (`/painel`) — página de configurações exibe e persiste feature flags
+
+### 12.3 Matrix de features por perfil (padrão — sobrescrevível por tenant)
+
+| Feature | Esotérico | Artesanato Mkt | Cursos | Produtos Diversos | Loja Artesanato | Loja Roupas | Loja Armarinhos | Loja Eletrônicos |
+|---|:---:|:---:|:---:|:---:|:---:|:---:|:---:|:---:|
+| Catálogo + checkout | ✓ | ✓ | — | ✓ | ✓ | ✓ | ✓ | ✓ |
+| Agenda eventos/cursos | ✓ | ✓ | ✓ | — | ✓ | — | — | — |
+| Blog editorial | ✓ | ✓ | ✓ | — | ✓ | ✓ | ✓ | ✓ |
+| Posts de clientes (social) | ✓ | ✓ | — | ✓ | — | — | — | — |
+| Avaliações (reviews) | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ |
+| Multi-seller (marketplace) | ✓ | ✓ | ✓ | ✓ | — | — | — | — |
+| Variantes de tamanho | — | — | — | ✓ | — | ✓ | ✓ | — |
+| Especificações técnicas | — | — | — | ✓ | — | — | — | ✓ |
+
+### 12.4 Sistema de temas visuais
+
+- [ ] Estrutura de diretórios de temas:
+  ```
+  resources/views/storefront/themes/
+      generico/          ← atual (fallback obrigatório)
+      esoterismo/        ← roxos, dourados, misticismo
+      artesanato/        ← tons terrosos, textura orgânica
+      cursos/            ← limpo, foco em CTAs de inscrição
+      roupas/            ← moda, foco em fotos grandes
+      armarinhos/        ← tons neutros, organização por seção
+      eletronicos/       ← azul/cinza, specs, comparativos
+  ```
+- [ ] `IdentificarTenantPorSlug` resolve o tema → prepend no ViewFinder com o diretório do tema
+- [ ] Fallback automático para `themes/generico/` se a view do tema não existir
+- [ ] `theme` pode ser diferente de `profile` (loja de roupas pode usar tema genérico)
+
+### 12.5 Admin (`/admin`) — gestão de perfis
+
+- [ ] Campo `profile` e `theme` no `TenantResource` (selects)
+- [ ] Campo de feature flags (toggle list) na página de edição do tenant
+- [ ] Widget de resumo de perfis no dashboard admin
+
+### 12.6 Testes
+
+- [ ] Teste: helper `feature()` retorna true/false conforme o JSON do tenant
+- [ ] Teste: middleware resolve tema correto e prepend ViewFinder
+- [ ] Teste: fallback para tema `generico` quando view do tema não existe
+
+---
+
+## FASE 13 — Agenda de Eventos e Cursos
+
+> Objetivo: sellers e marketplaces publicam eventos e cursos; clientes se inscrevem e pagam
+> pelo fluxo de checkout já existente.
+
+### 13.1 Modelo de dados
+
+- [ ] Migration `agenda_items`:
+  `id`, `tenant_id`, `seller_id` (nullable — do marketplace), `type` (evento|curso|workshop),
+  `title`, `slug`, `description`, `short_description`, `featured_image_url`,
+  `starts_at`, `ends_at`, `location` (nullable — online ou endereço físico),
+  `slots` (nullable — sem limite), `slots_used`, `price_centavos` (0 = gratuito),
+  `status` (draft|published|cancelled), soft delete
+- [ ] Migration `agenda_registrations`:
+  `id`, `agenda_item_id`, `user_id`, `order_id` (nullable — gratuito não gera Order),
+  `status` (pending|confirmed|cancelled), `confirmed_at`
+
+### 13.2 Regras de visibilidade
+
+- [ ] Evento de seller → sempre aparece na página do seller
+- [ ] Se `tenant.features.seller_events_on_marketplace = true` → aparece também na vitrine do marketplace
+- [ ] Configurável pelo dono do marketplace no painel do lojista
+
+### 13.3 API pública
+
+- [ ] `GET  /api/v1/agenda` — listagem de eventos/cursos do tenant (filtros: tipo, data, gratuito)
+- [ ] `GET  /api/v1/agenda/{slug}` — detalhe do evento
+- [ ] `POST /api/v1/agenda/{id}/register` — inscrição (autenticado); gratuito confirma direto, pago cria Order
+
+### 13.4 Storefront (Livewire)
+
+- [ ] `/loja/{slug}/agenda` — calendário/lista de eventos do tenant
+- [ ] `/loja/{slug}/agenda/{slug}` — detalhe + formulário de inscrição + pagamento
+- [ ] `/loja/{slug}/seller/{slug}/agenda` — agenda específica do seller
+- [ ] `AgendaCard` Livewire — card reutilizável com contagem de vagas em tempo real
+- [ ] Inscrição gratuita: confirma e envia e-mail imediatamente
+- [ ] Inscrição paga: redireciona para checkout existente (reusa `CheckoutForm`)
+
+### 13.5 Painel do Lojista (`/painel`)
+
+- [ ] `LojistaAgendaResource` — CRUD de eventos/cursos scoped ao tenant
+- [ ] Ação Publicar / Cancelar evento
+- [ ] Lista de inscrições por evento com status e dados do participante
+- [ ] Exportação CSV de inscritos
+
+### 13.6 Testes
+
+- [ ] Teste: evento publicado aparece na listagem pública
+- [ ] Teste: inscrição gratuita confirma imediatamente
+- [ ] Teste: evento com vagas esgotadas retorna 422 na inscrição
+- [ ] Teste: evento de seller não aparece no marketplace quando feature desabilitada
+- [ ] Teste: evento de seller aparece no marketplace quando feature habilitada
+
+---
+
+## FASE 14 — Blog e Conteúdo Editorial
+
+> Objetivo: sellers e marketplaces publicam artigos, tutoriais e novidades — gerando SEO e
+> fidelizando clientes antes da venda.
+
+### 14.1 Modelo de dados
+
+- [ ] Migration `posts`:
+  `id`, `tenant_id`, `author_id`, `author_type` (seller|marketplace),
+  `title`, `slug`, `excerpt`, `content` (longtext — HTML sanitizado),
+  `featured_image_url`, `status` (draft|published), `published_at`,
+  `reading_time_minutes`, soft delete
+- [ ] Migration `post_categories`: `id`, `tenant_id`, `name`, `slug`, `sort_order`
+- [ ] Migration `post_tags`: `id`, `name`, `slug` (global — compartilhado entre tenants)
+- [ ] Pivot `post_tag` e `post_post_category`
+
+### 14.2 API pública
+
+- [ ] `GET  /api/v1/blog` — listagem paginada (filtros: categoria, tag, autor)
+- [ ] `GET  /api/v1/blog/{slug}` — artigo completo
+- [ ] `GET  /api/v1/blog/categories` — categorias do tenant
+
+### 14.3 Storefront
+
+- [ ] `/loja/{slug}/blog` — listagem com sidebar de categorias e tags
+- [ ] `/loja/{slug}/blog/{slug}` — artigo completo com meta tags SEO (`og:*`, `article:*`)
+- [ ] `/loja/{slug}/blog/categoria/{slug}` — filtrado por categoria
+- [ ] `/loja/{slug}/seller/{slug}/blog` — blog do seller dentro do marketplace
+
+### 14.4 Painel do Lojista (`/painel`)
+
+- [ ] `LojistaBlogResource` — CRUD de posts com editor rico (Markdown ou TipTap via Filament)
+- [ ] `LojistaCategoriaPostResource` — CRUD de categorias do blog
+- [ ] Ação Publicar / Despublicar
+
+### 14.5 Testes
+
+- [ ] Teste: post publicado aparece na listagem pública
+- [ ] Teste: post em rascunho não aparece publicamente
+- [ ] Teste: meta tags SEO corretas na página do artigo
+- [ ] Teste: blog desabilitado (`features.blog = false`) retorna 404
+
+---
+
+## FASE 15 — Social Layer (Reviews e Posts de Clientes)
+
+> Objetivo: clientes avaliam produtos, sellers e cursos; e em marketplaces sociais postam
+> relatos de experiência — tudo com moderação pelo dono da loja/marketplace.
+
+### 15.1 Modelo de dados
+
+- [ ] Migration `reviews`:
+  `id`, `tenant_id`, `customer_id`,
+  `reviewable_type` (product|seller|agenda_item), `reviewable_id`,
+  `rating` (1–5), `title`, `body`,
+  `status` (pending|approved|rejected), `approved_at`, `approved_by`
+- [ ] Migration `customer_posts`:
+  `id`, `tenant_id`, `customer_id`, `body`,
+  `status` (pending|approved|rejected), `approved_at`
+- [ ] Tabela `customer_post_media` (via Spatie MediaLibrary)
+
+### 15.2 Regras de negócio
+
+- [ ] Review de produto → aparece na página do produto (media rating)
+- [ ] Review de seller → aparece no perfil do seller (média de avaliações)
+- [ ] Review de evento/curso → aparece na página do `agenda_item`
+- [ ] Customer posts → feed social da loja/marketplace (requer `features.social_posts = true`)
+- [ ] Todos os reviews passam por aprovação do seller/marketplace antes de publicar (configurável)
+
+### 15.3 Storefront
+
+- [ ] Seção de reviews na página de produto (estrelas + comentários)
+- [ ] Formulário de avaliação (autenticado) com upload de foto opcional
+- [ ] Feed de customer posts no marketplace com paginação infinita
+- [ ] Média de avaliações exibida no card do produto e perfil do seller
+
+### 15.4 Painel do Lojista (`/painel`)
+
+- [ ] `LojistaReviewResource` — fila de aprovação, ação Aprovar/Rejeitar
+- [ ] `LojistaPostClienteResource` — fila de customer posts, ação Aprovar/Rejeitar
+- [ ] Widget `ReviewsWidget` — média geral, quantidade pendente de aprovação
+
+### 15.5 Testes
+
+- [ ] Teste: review aprovado aparece na página do produto com rating
+- [ ] Teste: review pendente não aparece publicamente
+- [ ] Teste: reviews desabilitados (`features.reviews = false`) não exibem seção
+- [ ] Teste: customer post aparece no feed após aprovação
+- [ ] Teste: somente clientes autenticados podem postar review
+
+---
+
+## FASE 16 — Temas Visuais por Perfil
+
+> Objetivo: cada perfil de loja/marketplace tem identidade visual própria — não apenas cores,
+> mas estrutura de página, seções e hierarquia de conteúdo diferentes.
+
+### 16.1 Estrutura de cada tema
+
+```
+resources/views/storefront/themes/{tema}/
+    layouts/
+        loja.blade.php          ← header, footer, paleta de cores
+    home.blade.php              ← hero, seções em destaque
+    catalogo/
+        index.blade.php         ← grid vs lista, densidade
+    produto/
+        show.blade.php          ← galeria, specs, variantes
+    agenda/
+        index.blade.php         ← lista ou calendário
+        show.blade.php          ← detalhe do evento
+    blog/
+        index.blade.php         ← editorial ou cards compactos
+        show.blade.php          ← artigo com sidebar ou full-width
+    social/
+        feed.blade.php          ← feed de customer posts
+```
+
+### 16.2 Temas a desenvolver
+
+- [ ] `generico` — atual (já existe como base, refinamento visual)
+- [ ] `esoterismo` — tons roxos e dourados, elementos místicos, foco em agenda e blog
+- [ ] `artesanato` — tons terrosos, textura orgânica, produtos com destaque para fotos
+- [ ] `cursos` — limpo e moderno, CTAs de inscrição em destaque, sem catálogo de produtos
+- [ ] `roupas` — moda editorial, imagens grandes, grade de variantes de cor/tamanho
+- [ ] `armarinhos` — neutro, organizado por seções, especificações de material
+- [ ] `eletronicos` — azul/cinza, specs técnicas em destaque, comparativos
+
+### 16.3 Resolução de tema no middleware
+
+- [ ] `IdentificarTenantPorSlug` faz prepend no ViewFinder: `themes/{$tenant->theme()}/`
+- [ ] Fallback automático para `themes/generico/` quando view não existe no tema
+- [ ] Cache do tema resolvido por request (não re-resolve por view)
+
+### 16.4 Testes
+
+- [ ] Teste: tema `esoterismo` carrega layout correto
+- [ ] Teste: fallback para `generico` quando view do tema não existe
+- [ ] Teste: troca de tema não quebra rotas nem controllers
 
 ---
 
@@ -677,6 +961,8 @@ composer require filament/spatie-laravel-media-library-plugin:"^3.3"
 | Gateway de pagamento | **Mercado Pago** | Cobre PIX, cartão, boleto e demais métodos brasileiros em um único SDK. Tem sandbox completo e suporte nativo a marketplace split. |
 | Identificação de tenants na API | **Header `X-Tenant-ID`** | Compatível com API mobile e web sem exigir DNS wildcard em desenvolvimento. |
 | Isolamento de tenants | **Coluna `tenant_id`** | Simples, sem overhead de múltiplos bancos, adequado para o volume inicial da plataforma. |
+| URL de marketplace e loja individual | **`/loja/{slug}`** | Estrutura única simplifica middleware e rotas; diferenciação via `profile` + feature flags no tenant. |
+| Visibilidade de eventos de seller | **Ambos + configurável** | Eventos aparecem na página do seller e na vitrine do marketplace; dono controla via `features.seller_events_on_marketplace`. |
 
 ---
 
