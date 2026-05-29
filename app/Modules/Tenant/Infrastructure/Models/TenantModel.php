@@ -31,6 +31,7 @@ class TenantModel extends BaseTenantModel implements TenantWithDatabase
         'plan',
         'status',
         'data',
+        'origin_zipcode',
     ];
 
     /** @var array<string, string> */
@@ -39,7 +40,7 @@ class TenantModel extends BaseTenantModel implements TenantWithDatabase
         'deleted_at' => 'datetime',
     ];
 
-    protected static $customColumns = ['name', 'slug', 'plan', 'status'];
+    protected static $customColumns = ['name', 'slug', 'plan', 'status', 'origin_zipcode'];
 
     /**
      * Retorna os nomes de colunas personalizadas do tenant.
