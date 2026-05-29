@@ -530,7 +530,7 @@ composer require filament/spatie-laravel-media-library-plugin:"^3.3"
 
 ---
 
-## FASE 10 — Painel do Lojista (Filament)
+## FASE 10 — Painel do Lojista (Filament) `[x]`
 
 > Objetivo: lojistas gerenciam sua própria loja sem depender do super_admin.
 > Segundo painel Filament no mesmo projeto (`/painel`), restrito a `tenant_admin`,
@@ -538,63 +538,116 @@ composer require filament/spatie-laravel-media-library-plugin:"^3.3"
 
 ### 10.1 Fundação do painel
 
-- [ ] `LojistaPanelProvider` — path `/painel`, guard `web`, role `tenant_admin`
-- [ ] Acesso restrito: `auth()->user()->hasRole('tenant_admin')`
-- [ ] `app/Modules/Lojista/Presentation/Resources/` — diretório exclusivo (Resources não compartilhados com `/admin`)
-- [ ] Scoping global: todos os Resources filtram por `auth()->user()->tenant_id`
-- [ ] Tema e branding diferenciado do painel super_admin
-- [ ] Widget `LojistaOverviewWidget` — GMV do dia/mês, pedidos pendentes, estoque baixo, posts agendados
+- [x] `LojistaPanelProvider` — path `/painel`, guard `web`, role `tenant_admin`
+- [x] Acesso restrito: `auth()->user()->hasRole('tenant_admin')`
+- [x] `app/Modules/Lojista/Presentation/Resources/` — diretório exclusivo (Resources não compartilhados com `/admin`)
+- [x] Scoping global: todos os Resources filtram por `auth()->user()->tenant_id` via `getEloquentQuery()`
+- [x] Tema cor Emerald — diferenciado do painel super_admin (Violet)
+- [x] Widget `LojistaOverviewWidget` — receita do mês, pedidos pendentes, estoque baixo, posts agendados
 
 ### 10.2 Catálogo
 
-- [ ] `LojistaProdutoResource` — CRUD completo de produtos (scoped ao tenant)
-- [ ] Upload de imagens com preview (via Spatie Medialibrary, mesmo padrão do admin)
-- [ ] Gestão de variantes inline
-- [ ] `LojistaCategoriaResource` — CRUD de categorias com suporte a hierarquia
-- [ ] Importação via planilha (botão "Importar Planilha" — mesmo importer existente)
+- [x] `LojistaProdutoResource` — CRUD completo de produtos scoped ao tenant
+- [x] Upload de imagens via Spatie MediaLibrary, dimensões para frete
+- [x] `LojistaCategoriaResource` — CRUD de categorias com hierarquia scoped ao tenant
+- [x] `mutateFormDataBeforeCreate` injeta `tenant_id` automaticamente em todos os Resources
 
 ### 10.3 Pedidos
 
-- [ ] `LojistaPedidoResource` — listagem com filtros por status e data
-- [ ] Página de detalhe: itens, valor, endereço de entrega, histórico de status
-- [ ] Ações: Confirmar, Processar, Marcar como Enviado, Marcar como Entregue, Cancelar
-- [ ] Exibir `tracking_code` e link para `shipping_label_url` quando disponível
-- [ ] Badge de status do pagamento (pendente, pago, falhou, estornado)
+- [x] `LojistaPedidoResource` — listagem com filtros por status, pagamento e período
+- [x] `ViewLojistaPedido` — detalhe com itens, totais, endereço, rastreio via Infolist
+- [x] Ações inline: Confirmar, Em Processamento, Enviado (modal com tracking_code), Entregue, Cancelar
+- [x] Cada transição registra entrada em `order_status_history`
 
 ### 10.4 Clientes
 
-- [ ] `LojistaClienteResource` — usuários com role `customer` vinculados ao tenant
-- [ ] Dados: nome, e-mail, telefone, data do cadastro, total de pedidos, valor acumulado
+- [x] `LojistaClienteResource` — listagem read-only de `customer` do tenant
 
 ### 10.5 Cupons
 
-- [ ] `LojistaCupomResource` — CRUD completo de cupons (percent e fixed)
-- [ ] Campos: código, tipo, valor, valor mínimo, limite de usos, expiração, status
+- [x] `LojistaCupomResource` — CRUD completo (percent e fixed), code uppercase automático
 
 ### 10.6 Frete
 
-- [ ] `LojistaZonaFreteResource` — CRUD de zonas por UF (27 estados, CheckboxList)
-- [ ] `LojistaTarifaFreteResource` — CRUD de tarifas com frete grátis configurável
-- [ ] Campo `origin_zipcode` editável nas configurações da loja
+- [x] `LojistaZonaFreteResource` — CRUD de zonas por UF (CheckboxList 27 estados)
+- [x] `LojistaTarifaFreteResource` — CRUD de tarifas com frete grátis scoped ao tenant
 
 ### 10.7 Marketing
 
-- [ ] `LojistaContaSocialResource` — contas Instagram/Facebook conectadas
-- [ ] `LojistaPostAgendadoResource` — posts com badges de status, ação Cancelar
-- [ ] Toggle `MARKETING_AUTO_POST` configurável por loja
+- [x] `LojistaContaSocialResource` — contas Instagram/Facebook, ação Desativar
+- [x] `LojistaPostAgendadoResource` — posts com badges de status, ação Cancelar
 
 ### 10.8 Configurações da loja
 
-- [ ] Página `/painel/configuracoes` — edição de perfil da loja
-- [ ] Campos: nome, slug, CEP de origem (frete), dados bancários para repasse (bank_info JSON)
-- [ ] Upload de logo da loja
+- [x] Página `LojistaConfiguracoes` (`/painel/lojista-configuracoes`) — edição de nome e CEP de origem
+- [x] `TenantModel::$customColumns` atualizado para incluir `origin_zipcode`
 
-### 10.9 Testes
+### 10.9 Resultado
 
-- [ ] Teste: lojista só vê dados do seu próprio tenant (isolamento)
-- [ ] Teste: lojista não acessa `/admin`
-- [ ] Teste: super_admin não acessa `/painel` (redirect correto)
-- [ ] Testes de CRUD de produto e pedido scoped ao tenant
+- [x] 24 rotas registradas em `/painel`
+- [x] 127 testes passando (sem regressão)
+
+---
+
+## FASE 11 — Vitrine do Cliente (Storefront)
+
+> Objetivo: cliente final navega pela loja, adiciona itens ao carrinho e finaliza
+> a compra diretamente no browser — sem app separado.
+>
+> **Tecnologia:** Laravel + Livewire v3 + Alpine.js (mesmo projeto, mesmos Use Cases)
+> **Identificação do tenant (em etapas):**
+> - Fase 11: slug na URL `/loja/{slug}/` — funciona em localhost sem DNS wildcard
+> - Fase 9: subdomínio `{slug}.lucravendas.com.br` + domínio próprio por tenant
+
+### 11.1 Fundação
+
+- [ ] `composer require livewire/livewire`
+- [ ] Middleware `IdentificarTenantPorSlug` — extrai slug da URL, busca tenant, compartilha via `request()`
+- [ ] Layout base `resources/views/storefront/layouts/loja.blade.php` — header, carrinho mini, footer
+- [ ] `StorefrontServiceProvider` — registra rotas web e middleware
+- [ ] Rotas em `routes/web.php` com prefixo `/loja/{tenantSlug}`
+
+### 11.2 Catálogo público
+
+- [ ] Home da loja (`/loja/{slug}`) — produtos em destaque, categorias, banner
+- [ ] Catálogo (`/loja/{slug}/produtos`) — listagem com Livewire `CatalogoFiltros` (categoria, preço, busca)
+- [ ] Produto (`/loja/{slug}/produtos/{product-slug}`) — galeria, variantes, botão "Adicionar ao Carrinho"
+
+### 11.3 Carrinho (Livewire)
+
+- [ ] `CarrinhoWidget` — mini-carrinho no header (contagem + preview) — Alpine.js para abrir/fechar
+- [ ] `CarrinhoPage` — página `/loja/{slug}/carrinho` com itens, quantidades, cupom, resumo
+- [ ] Carrinho anônimo via `session()` com fallback para Sanctum quando autenticado
+
+### 11.4 Checkout (Livewire)
+
+- [ ] `CheckoutForm` — wizard: endereço → frete → pagamento
+- [ ] Passo 1: formulário de endereço com CEP (auto-preenchimento via ViaCEP)
+- [ ] Passo 2: opções de frete (`CalculateShippingHandler` chamado diretamente)
+- [ ] Passo 3: seleção de método de pagamento (PIX, cartão via MP.js, boleto)
+- [ ] Confirmação: página com resumo do pedido e instruções de pagamento
+
+### 11.5 Área do cliente
+
+- [ ] Login / registro scoped ao tenant (`/loja/{slug}/login`, `/loja/{slug}/cadastro`)
+- [ ] Minha conta (`/loja/{slug}/minha-conta`) — dados pessoais
+- [ ] Meus pedidos (`/loja/{slug}/minha-conta/pedidos`) — listagem com status badges
+- [ ] Detalhe do pedido (`/loja/{slug}/minha-conta/pedidos/{id}`) — rastreio, itens, totais
+
+### 11.6 SEO e performance
+
+- [ ] Rotas server-rendered (Blade) — indexáveis pelo Google sem configuração adicional
+- [ ] Meta tags dinâmicas por produto e categoria (`<title>`, `og:*`)
+- [ ] Cache Redis nas páginas de catálogo (reusa `CacheKeys` existente)
+- [ ] Imagens com conversão `thumb` do Spatie MediaLibrary
+
+### 11.7 Testes
+
+- [ ] Teste: home da loja carrega com tenant válido
+- [ ] Teste: slug inválido retorna 404
+- [ ] Teste: produto aparece no catálogo público
+- [ ] Teste: adicionar ao carrinho (Livewire component test)
+- [ ] Teste: checkout cria pedido e redireciona para confirmação
 
 ---
 

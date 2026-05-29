@@ -187,6 +187,8 @@ docker compose logs -f app
 |---|---|---|
 | API REST | `http://localhost:8000/api/v1/` | Endpoints da aplicação |
 | Painel Admin | `http://localhost:8000/admin` | Filament v3 — acesso super_admin |
+| Painel Lojista | `http://localhost:8000/painel` | Filament v3 — acesso tenant_admin |
+| Vitrine | `http://localhost:8000/loja/{slug}/` | Livewire — acesso público |
 | Telescope | `http://localhost:8000/telescope` | Diagnóstico — somente em `APP_ENV=local` |
 | phpMyAdmin | `http://localhost/phpmyadmin` | Interface web do banco (via XAMPP) |
 | Logs de e-mail | `storage/logs/laravel.log` | E-mails são logados em arquivo |
@@ -199,6 +201,8 @@ docker compose logs -f app
 |---|---|---|
 | API REST | `http://localhost:8000/api/v1/` | Endpoints da aplicação |
 | Painel Admin | `http://localhost:8000/admin` | Filament v3 — acesso super_admin |
+| Painel Lojista | `http://localhost:8000/painel` | Filament v3 — acesso tenant_admin |
+| Vitrine | `http://localhost:8000/loja/{slug}/` | Livewire — acesso público |
 | Telescope | `http://localhost:8000/telescope` | Diagnóstico de requests, queries, jobs |
 | Horizon | `http://localhost:8000/horizon` | Dashboard de filas Redis — acesso super_admin |
 | Mailpit | `http://localhost:8025` | Interface para visualizar e-mails |
@@ -218,13 +222,21 @@ Email:  jmarciosilva@gmail.com
 Senha:  12345678
 ```
 
-**Painel do Lojista** — gestão da loja própria *(Fase 10 — em desenvolvimento)*
+**Painel do Lojista** — gestão da loja própria
 
 ```
 URL:    http://localhost:8000/painel
 Role:   tenant_admin
 Email:  (e-mail do lojista criado via API ou importação)
 Senha:  (senha definida no cadastro)
+```
+
+**Vitrine do Cliente** — loja pública *(Fase 11 — em desenvolvimento)*
+
+```
+URL:    http://localhost:8000/loja/{slug}/
+Acesso: público (sem autenticação para navegar)
+Slug:   slug do tenant (coluna slug da tabela tenants)
 ```
 
 > Nunca use as credenciais padrão em produção. O lojista só enxerga dados do seu próprio tenant.
@@ -614,12 +626,21 @@ tests/
 - **Branches:** crie a partir de `develop` com prefixo `feature/`, `fix/` ou `chore/`.
 - **Testes:** toda funcionalidade nova deve ter testes antes do Pull Request.
 
-### Painel do Lojista — convenções específicas (Fase 10)
+### Painel do Lojista — convenções (Fase 10)
 
 - **Localização dos Resources:** `app/Modules/Lojista/Presentation/Resources/` — separados dos Resources do painel Admin.
-- **Escopo obrigatório:** todo Resource do painel lojista deve sobrescrever `getEloquentQuery()` filtrando por `auth()->user()->tenant_id`. Nenhum dado de outro tenant pode vazar.
-- **Nenhum Use Case novo:** o painel lojista consome os mesmos Models Eloquent e Use Cases existentes — apenas apresenta com escopo diferente.
-- **Nomenclatura:** prefixo `Lojista` nos Resources (ex: `LojistaProdutoResource`), para distinguir dos Resources do admin sem conflito de classe.
+- **Escopo obrigatório:** todo Resource sobrescreve `getEloquentQuery()` filtrando por `auth()->user()->tenant_id`. Nenhum dado de outro tenant pode vazar.
+- **Nenhum Use Case novo:** o painel lojista consome os mesmos Models Eloquent existentes.
+- **Nomenclatura:** prefixo `Lojista` nos Resources para evitar conflito de classe com o admin.
+
+### Vitrine do Cliente — convenções (Fase 11)
+
+- **Identificação do tenant:** middleware `IdentificarTenantPorSlug` extrai `{slug}` da URL e disponibiliza o tenant via `request()->route('tenantSlug')`.
+- **Rotas:** em `routes/web.php` com prefixo `/loja/{tenantSlug}`.
+- **Livewire:** componentes em `app/Modules/Storefront/Presentation/Livewire/`.
+- **Views:** em `resources/views/storefront/` — layout base + páginas.
+- **Reutilização:** Livewire chama os Use Cases existentes diretamente (ex: `CheckoutHandler`, `GetCartHandler`) — sem HTTP overhead.
+- **Carrinho anônimo:** usa `session()` com chave `cart_session_id` como substituto do header `X-Cart-Session` da API.
 
 ---
 
