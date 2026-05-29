@@ -462,15 +462,71 @@ composer require filament/spatie-laravel-media-library-plugin:"^3.3"
 
 ---
 
-## FASE 8 — Observabilidade e Performance
+## FASE 8 — Observabilidade e Performance `[x]`
 
-- [ ] Sentry para rastreamento de erros
-- [ ] Laravel Telescope (staging)
-- [ ] Laravel Horizon com métricas de filas no painel admin
-- [ ] Rate limiting na API (por IP e por token)
-- [ ] Cache em endpoints pesados com Redis
-- [ ] Load testing com k6 ou Artillery
-- [ ] Backup automático do banco (`spatie/laravel-backup`)
+> Objetivo: camada de operações em produção — rastreamento de erros, visibilidade de filas, proteção de endpoints, cache Redis e backup automático.
+
+### 8.1 Sentry — rastreamento de erros
+
+- [x] `composer require sentry/sentry-laravel`
+- [x] Integração no `bootstrap/app.php` via `withExceptions()` — captura toda `Throwable` quando `SENTRY_LARAVEL_DSN` está configurado
+- [x] `config/sentry.php` publicado
+- [x] Env vars: `SENTRY_LARAVEL_DSN`, `SENTRY_TRACES_SAMPLE_RATE`, `SENTRY_ENVIRONMENT`
+
+### 8.2 Laravel Telescope — diagnóstico em dev/staging
+
+- [x] `composer require laravel/telescope --dev`
+- [x] `TelescopeServiceProvider` restrito a `local` e `staging` — não carrega em produção
+- [x] Gate `viewTelescope` configurável via `TELESCOPE_ALLOWED_EMAILS` (separados por vírgula)
+- [x] Migration `telescope_entries` aplicada
+- [x] Env vars: `TELESCOPE_ENABLED`, `TELESCOPE_ALLOWED_EMAILS`
+
+### 8.3 Laravel Horizon — métricas de filas
+
+- [x] `composer require laravel/horizon` (requer Linux/Docker em runtime — ext-pcntl)
+- [x] `config/horizon.php` — filas por prioridade: `high`, `default`, `low`
+- [x] `HorizonServiceProvider` — gate restrito a `super_admin`
+- [x] Dashboard disponível em `/horizon`
+- [x] `HorizonStatsWidget` no Filament (grupo **Plataforma**) — jobs pendentes, processados, falhos
+- [x] `horizon:snapshot` agendado a cada 5 minutos para gráficos históricos
+- [x] Jobs com fila correta: `SendOrderConfirmationEmail` → `high`; `PublishScheduledPost` → `default`; `ProcessPayoutJob`, `ExpireAbandonedCarts` → `low`
+
+### 8.4 Rate Limiting na API
+
+- [x] Limitadores registrados em `AppServiceProvider::boot()` via `RateLimiter::for()`
+- [x] `throttle:auth` — 10 req/min por IP (login, register)
+- [x] `throttle:api` — 60 req/min por IP (endpoints públicos: produtos, categorias, sellers, carrinho, frete)
+- [x] `throttle:api-auth` — 1.000 req/min por user_id (endpoints autenticados)
+- [x] Webhooks sem rate limiting (chamados por serviços externos)
+- [x] Aplicado em todos os grupos de rotas em `routes/api.php`
+
+### 8.5 Cache Redis em endpoints pesados
+
+- [x] `app/Support/CacheKeys.php` — helper com chaves e TTLs centralizados
+- [x] `GET /categories` — `Cache::remember()` com chave `categories:{tenant_id}`, TTL 5 min
+- [x] `GET /products` — cache por `products:{tenant_id}:{hash_query}`, TTL 3 min
+- [x] `GET /marketplace/sellers` — `sellers:{tenant_id}`, TTL 5 min
+- [x] `GET /marketplace/sellers/{slug}` — `seller:{tenant_id}:{slug}`, TTL 5 min
+- [x] Invalidação automática: listeners `ProductCreated` e `ProductUpdated` limpam cache do tenant
+
+### 8.6 Load Testing com k6
+
+- [x] `k6/scripts/catalog.js` — ramping de 0→50 VUs, listagem + busca de produtos
+- [x] `k6/scripts/checkout.js` — fluxo login → carrinho com 10 VUs
+- [x] `k6/scripts/auth.js` — 15 iterações para validar throttle:auth (espera 429)
+- [x] `k6/README.md` — instruções de instalação e execução para macOS/Linux/Windows
+
+### 8.7 Backup automático — spatie/laravel-backup
+
+- [x] `composer require spatie/laravel-backup`
+- [x] `config/backup.php` — backup somente de banco (`--only-db`), destino S3 (configurável via `BACKUP_DISK`)
+- [x] Retenção: 7 dias completos → 16 dias diários → 8 semanas → 4 meses → 2 anos
+- [x] `backup:run --only-db` diário às 2h
+- [x] `backup:clean` diário às 2h30
+- [x] `backup:monitor` diário às 9h
+- [x] Env vars: `BACKUP_DISK`, `BACKUP_ARCHIVE_PASSWORD`
+
+### 8.8 Suite de testes — 127 testes passando (sem novos testes de infraestrutura)
 
 ---
 

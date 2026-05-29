@@ -187,10 +187,11 @@ docker compose logs -f app
 |---|---|---|
 | API REST | `http://localhost:8000/api/v1/` | Endpoints da aplicação |
 | Painel Admin | `http://localhost:8000/admin` | Filament v3 — acesso super_admin |
+| Telescope | `http://localhost:8000/telescope` | Diagnóstico — somente em `APP_ENV=local` |
 | phpMyAdmin | `http://localhost/phpmyadmin` | Interface web do banco (via XAMPP) |
 | Logs de e-mail | `storage/logs/laravel.log` | E-mails são logados em arquivo |
 
-> Redis, Meilisearch e Mailpit não são necessários em desenvolvimento XAMPP.
+> Redis, Meilisearch e Mailpit não são necessários em desenvolvimento XAMPP. Horizon requer Linux/Docker (ext-pcntl).
 
 ### Com Docker
 
@@ -198,11 +199,13 @@ docker compose logs -f app
 |---|---|---|
 | API REST | `http://localhost:8000/api/v1/` | Endpoints da aplicação |
 | Painel Admin | `http://localhost:8000/admin` | Filament v3 — acesso super_admin |
+| Telescope | `http://localhost:8000/telescope` | Diagnóstico de requests, queries, jobs |
+| Horizon | `http://localhost:8000/horizon` | Dashboard de filas Redis — acesso super_admin |
 | Mailpit | `http://localhost:8025` | Interface para visualizar e-mails |
 | Meilisearch | `http://localhost:7700` | Painel do motor de busca |
 | phpMyAdmin | `http://localhost:8080` | Interface web do banco de dados |
 | MySQL | `localhost:3306` | Banco de dados (cliente externo) |
-| Redis | `localhost:6379` | Cache e filas |
+| Redis | `localhost:6379` | Cache, filas e sessões |
 
 ### Credenciais padrão do painel admin
 
@@ -230,7 +233,7 @@ php artisan test
 docker compose exec app php artisan test
 ```
 
-Resultado esperado: **116 testes passando**, 0 falhas.
+Resultado esperado: **127 testes passando**, 0 falhas.
 
 ### Executar por suite
 
@@ -252,11 +255,13 @@ php artisan test --filter=Checkout
 php artisan test --filter=Payment
 php artisan test --filter=Marketplace
 php artisan test --filter=Shipping
+php artisan test --filter=Marketing
 php artisan test tests/Feature/Catalog/ProductTest.php
 php artisan test tests/Feature/Checkout/CartTest.php
 php artisan test tests/Feature/Payments/PaymentTest.php
 php artisan test tests/Feature/Marketplace/
 php artisan test tests/Feature/Shipping/
+php artisan test tests/Feature/Marketing/
 ```
 
 ### O que cada grupo de testes valida
@@ -283,6 +288,7 @@ php artisan test tests/Feature/Shipping/
 | Feature | `tests/Feature/Shipping/ShippingCalculateTest.php` | Cálculo interno por zona, ME mockado, frete grátis, zona inexistente |
 | Feature | `tests/Feature/Shipping/CheckoutWithShippingTest.php` | Endereço persistido, custo de frete aplicado na tarifa interna |
 | Feature | `tests/Feature/Shipping/TrackingWebhookTest.php` | Atualização de tracking, transição delivered, tracking inexistente |
+| Feature | `tests/Feature/Marketing/SchedulePostTest.php` | Agendamento manual, rate limiting, conta de outro tenant, job de publicação, listener ProductCreated |
 
 ---
 
@@ -517,6 +523,9 @@ php artisan optimize:clear
 # Listar todas as rotas registradas
 php artisan route:list
 
+# Listar jobs agendados
+php artisan schedule:list
+
 # REPL interativo (Tinker)
 php artisan tinker
 
@@ -525,6 +534,15 @@ php artisan tenants:migrate
 
 # Rodar migrations em um tenant específico
 php artisan tenants:migrate --tenants=UUID_DO_TENANT
+
+# Iniciar o Horizon (requer Linux/Docker)
+php artisan horizon
+
+# Rodar backup manualmente
+php artisan backup:run --only-db
+
+# Verificar backups existentes
+php artisan backup:list
 ```
 
 ---
@@ -545,6 +563,8 @@ tests/
 │   ├── Checkout/
 │   │   ├── CartTest.php                  # Carrinho anônimo, merge, cupons, estoque
 │   │   └── CheckoutTest.php              # Fluxo completo, estoque, desconto
+│   ├── Marketing/
+│   │   └── SchedulePostTest.php          # Agendamento manual, throttle, job, listener
 │   ├── Marketplace/
 │   │   ├── SellerRegistrationTest.php    # Cadastro, duplicatas, auth guard
 │   │   ├── SellerListingTest.php         # Listagem pública, perfil, produtos do seller

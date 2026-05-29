@@ -27,7 +27,11 @@ O LucraVendas é uma API REST construída em Laravel 12 que alimenta lojas onlin
 | Media | spatie/laravel-medialibrary v11 |
 | Pagamentos | Mercado Pago SDK (PIX, cartão de crédito, boleto) |
 | Frete | Melhor Envio API v2 (cálculo, etiqueta, rastreio) |
+| Marketing | Meta Graph API v19.0 (Instagram Business + Facebook Pages) |
 | Admin | Filament v3.3 |
+| Observabilidade | Sentry (erros) + Laravel Telescope (diagnóstico) + Horizon (filas) |
+| Backup | spatie/laravel-backup (diário, S3) |
+| Load Testing | k6 (scripts em `k6/`) |
 | Testes | PHPUnit + Pest |
 
 ---
@@ -274,6 +278,13 @@ GET    /api/v1/shipping/calculate?zipcode=&state=
 
 # Webhook Melhor Envio (sem autenticação — rastreio)
 POST   /api/v1/webhooks/shipping
+
+# Marketing — LucraMarketing (requer autenticação, exceto callback)
+GET    /api/v1/marketing/connect/{platform}   # retorna URL OAuth (instagram|facebook)
+GET    /api/v1/marketing/oauth/callback        # callback OAuth — sem autenticação
+GET    /api/v1/marketing/accounts              # lista contas sociais conectadas
+GET    /api/v1/marketing/posts                 # lista posts agendados
+POST   /api/v1/marketing/posts                 # agendar post manual
 ```
 
 ---
@@ -301,6 +312,8 @@ Senha:  12345678
 | **Financeiro** | Listagem de transações (PIX/Cartão/Boleto), badges de status, ação de estorno com confirmação |
 | **Marketplace** | Aprovação/suspensão de sellers, comissões por item, repasses (payouts), widget GMV |
 | **Frete** | CRUD de zonas por UF (27 estados), tarifas com frete grátis configurável por valor mínimo |
+| **Marketing** | Contas sociais conectadas (Instagram/Facebook), posts agendados, widget de métricas |
+| **Plataforma** | Widget Horizon (jobs pendentes/processados/falhos), widget de stats gerais da plataforma |
 
 ### Importação via planilha
 
@@ -329,8 +342,8 @@ php artisan test --testsuite=Feature
 php artisan test --coverage
 ```
 
-116 testes passando. Os testes usam SQLite em memória — independentes do banco principal.
-Os gateways Mercado Pago e Melhor Envio são **mockados** nos testes — nenhuma chamada real é feita às APIs externas.
+127 testes passando. Os testes usam SQLite em memória — independentes do banco principal.
+Os gateways externos (Mercado Pago, Melhor Envio, Meta Graph API) são **mockados** nos testes — nenhuma chamada real é feita às APIs externas.
 
 ---
 
@@ -369,8 +382,8 @@ O projeto segue **Domain-Driven Design (DDD)**:
 | 4 | Pagamentos via Mercado Pago (PIX, cartão, boleto) | Concluída |
 | 5 | Marketplace multi-seller (sellers, comissões, repasses) | Concluída |
 | 6 | Frete e logística (Melhor Envio, tarifas internas, rastreio) | Concluída |
-| 7 | LucraMarketing nativo | Pendente |
-| 8 | Observabilidade e performance | Pendente |
+| 7 | LucraMarketing nativo (Instagram/Facebook via Meta Graph API) | Concluída |
+| 8 | Observabilidade e performance (Sentry, Horizon, cache, rate limiting, backup) | Concluída |
 | 9 | Go-live e infraestrutura | Pendente |
 
 ---
