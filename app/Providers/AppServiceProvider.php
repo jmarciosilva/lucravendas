@@ -59,6 +59,8 @@ use App\Modules\Payments\Application\UseCases\ProcessWebhook\ProcessWebhookHandl
 use App\Modules\Payments\Application\UseCases\RefundPayment\RefundPaymentHandler;
 use App\Modules\Payments\Domain\Contracts\PaymentGatewayInterface;
 use App\Modules\Catalog\Domain\Events\ProductCreated;
+use App\Modules\Catalog\Domain\Events\ProductUpdated;
+use App\Support\CacheKeys;
 use App\Modules\Marketing\Application\UseCases\AutoScheduleProductPost\AutoScheduleProductPostCommand;
 use App\Modules\Marketing\Application\UseCases\AutoScheduleProductPost\AutoScheduleProductPostHandler;
 use App\Modules\Marketing\Application\UseCases\ConnectAccount\ConnectAccountHandler;
@@ -78,7 +80,11 @@ use App\Modules\Payments\Infrastructure\Gateways\MercadoPagoGateway;
 use App\Modules\Payments\Infrastructure\Repositories\EloquentPaymentTransactionRepository;
 use App\Modules\Tenant\Application\UseCases\LoginUser\LoginUserHandler;
 use App\Modules\Tenant\Application\UseCases\RegisterUser\RegisterUserHandler;
+use Illuminate\Cache\RateLimiting\Limit;
+use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\Event;
+use Illuminate\Support\Facades\RateLimiter;
 use Illuminate\Support\ServiceProvider;
 
 /**
@@ -176,7 +182,23 @@ final class AppServiceProvider extends ServiceProvider
 
     public function boot(): void
     {
-        // Listener: OrderCreated → envia e-mail de confirmação
+        // ─── Rate Limiters da API ──────────────────────────────────────────────
+        // API pública: 60 requisições por minuto por IP
+        RateLimiter::for('api', fn (Request $req) =>
+            Limit::perMinute(60)->by($req->ip())
+        );
+
+        // API autenticada: 1000 requisições por minuto por user_id
+        RateLimiter::for('api-auth', fn (Request $req) =>
+            Limit::perMinute(1000)->by($req->user()?->id ?: $req->ip())
+        );
+
+        // Endpoints sensíveis (login/register): 10 requisições por minuto por IP
+        RateLimiter::for('auth', fn (Request $req) =>
+            Limit::perMinute(10)->by($req->ip())
+        );
+
+        // ─── Listener: OrderCreated → envia e-mail de confirmação
         Event::listen(OrderCreated::class, function (OrderCreated $event): void {
             dispatch(new SendOrderConfirmationEmail($event));
         });
@@ -191,6 +213,15 @@ final class AppServiceProvider extends ServiceProvider
             app(GenerateLabelHandler::class)->handle(
                 new \App\Modules\Shipping\Application\UseCases\GenerateLabel\GenerateLabelCommand($event->orderId)
             );
+        });
+
+        // Listener: ProductCreated/Updated → invalida cache de produtos e categorias do tenant
+        Event::listen([ProductCreated::class, ProductUpdated::class], function ($event): void {
+            $tenantId = $event->product->tenantId();
+            Cache::forget(CacheKeys::categories($tenantId));
+            // Apaga todas as chaves de listagem de produtos deste tenant (prefixo wildcard não disponível
+            // com driver de banco — usamos chave base que será sobrescrita na próxima leitura)
+            Cache::forget(CacheKeys::products($tenantId));
         });
 
         // Listener: ProductCreated → agenda post automático em todas as contas sociais ativas

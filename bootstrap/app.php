@@ -24,4 +24,11 @@ return Application::configure(basePath: dirname(__DIR__))
                 return response()->json(['message' => 'Não autenticado.'], 401);
             }
         });
+
+        // Reporta exceções ao Sentry quando o DSN estiver configurado
+        $exceptions->report(function (\Throwable $e): void {
+            if (app()->bound('sentry') && config('sentry.dsn')) {
+                app('sentry')->captureException($e);
+            }
+        });
     })->create();

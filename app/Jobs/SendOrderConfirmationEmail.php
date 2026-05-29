@@ -14,7 +14,10 @@ class SendOrderConfirmationEmail implements ShouldQueue
 {
     use Queueable;
 
-    public function __construct(private readonly OrderCreated $event) {}
+    public function __construct(private readonly OrderCreated $event)
+    {
+        $this->onQueue('high'); // E-mails de confirmação têm prioridade alta
+    }
 
     public function handle(): void
     {

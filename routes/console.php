@@ -17,3 +17,15 @@ Schedule::job(new \App\Jobs\ProcessPayoutJob)->weeklyOn(1, '9:00')->name('proces
 
 // Publica posts agendados com publish_at vencido — executa a cada hora
 Schedule::job(new \App\Jobs\PublishScheduledPost)->hourly()->name('publish-scheduled-posts');
+
+// Snapshot de métricas do Horizon a cada 5 minutos (necessário para gráficos históricos)
+Schedule::command('horizon:snapshot')->everyFiveMinutes()->name('horizon-snapshot');
+
+// Backup diário do banco de dados às 2h — armazenado no S3
+Schedule::command('backup:run --only-db')->dailyAt('02:00')->name('daily-backup');
+
+// Limpeza de backups antigos às 2h30 (mantém política de retenção configurada)
+Schedule::command('backup:clean')->dailyAt('02:30')->name('backup-cleanup');
+
+// Monitoramento às 9h — envia notificação se o último backup estiver ausente ou falho
+Schedule::command('backup:monitor')->dailyAt('09:00')->name('backup-monitor');

@@ -6,6 +6,8 @@ namespace App\Modules\Catalog\Application\UseCases\ListCategories;
 
 use App\Modules\Catalog\Domain\Repositories\CategoryRepositoryInterface;
 use App\Modules\Catalog\Infrastructure\Models\CategoryModel;
+use App\Support\CacheKeys;
+use Illuminate\Support\Facades\Cache;
 
 /**
  * Retorna a árvore de categorias ativas do tenant.
@@ -26,6 +28,15 @@ final class ListCategoriesHandler
      */
     public function handle(string $tenantId): array
     {
+        return Cache::remember(
+            CacheKeys::categories($tenantId),
+            CacheKeys::CATEGORIES_TTL,
+            fn () => $this->fetch($tenantId)
+        );
+    }
+
+    private function fetch(string $tenantId): array
+    {
         // Carrega todas as categorias ativas em uma única query
         $all = CategoryModel::query()
             ->where('tenant_id', $tenantId)
@@ -39,6 +50,8 @@ final class ListCategoriesHandler
 
         return $this->buildTree($byParent, null);
     }
+
+
 
     /**
      * Monta recursivamente a árvore de categorias.

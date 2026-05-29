@@ -14,8 +14,10 @@ use App\Modules\Catalog\Infrastructure\Models\ProductModel;
 use App\Modules\Catalog\Presentation\Requests\CreateProductRequest;
 use App\Modules\Catalog\Presentation\Requests\UpdateProductRequest;
 use App\Modules\Catalog\Presentation\Resources\ProductResource;
+use App\Support\CacheKeys;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Cache;
 use RuntimeException;
 
 /**
@@ -55,24 +57,34 @@ final class ProductController extends Controller
             $perPage = min((int) $request->query('per_page', 15), 100);
             $page    = max((int) $request->query('page', 1), 1);
 
-            $result = ProductModel::query()
-                ->where('tenant_id', $tenantId)
-                ->where('status', 'active')
-                ->when(isset($filters['category_id']), fn ($q) => $q->where('category_id', $filters['category_id']))
-                ->when(isset($filters['min_price']), fn ($q) => $q->where('price', '>=', $filters['min_price']))
-                ->when(isset($filters['max_price']), fn ($q) => $q->where('price', '<=', $filters['max_price']))
-                ->orderBy('name')
-                ->paginate(perPage: $perPage, page: $page);
+            $cacheKey = CacheKeys::products($tenantId, CacheKeys::hashQuery(
+                array_merge($filters, ['per_page' => $perPage, 'page' => $page])
+            ));
 
-            return response()->json([
-                'data'  => ProductResource::collection($result->items()),
-                'meta'  => [
-                    'total'        => $result->total(),
-                    'per_page'     => $result->perPage(),
-                    'current_page' => $result->currentPage(),
-                    'last_page'    => $result->lastPage(),
-                ],
-            ]);
+            $payload = Cache::remember($cacheKey, CacheKeys::PRODUCTS_TTL, function () use (
+                $tenantId, $filters, $perPage, $page
+            ) {
+                $result = ProductModel::query()
+                    ->where('tenant_id', $tenantId)
+                    ->where('status', 'active')
+                    ->when(isset($filters['category_id']), fn ($q) => $q->where('category_id', $filters['category_id']))
+                    ->when(isset($filters['min_price']), fn ($q) => $q->where('price', '>=', $filters['min_price']))
+                    ->when(isset($filters['max_price']), fn ($q) => $q->where('price', '<=', $filters['max_price']))
+                    ->orderBy('name')
+                    ->paginate(perPage: $perPage, page: $page);
+
+                return [
+                    'data'  => ProductResource::collection($result->items())->toArray(request()),
+                    'meta'  => [
+                        'total'        => $result->total(),
+                        'per_page'     => $result->perPage(),
+                        'current_page' => $result->currentPage(),
+                        'last_page'    => $result->lastPage(),
+                    ],
+                ];
+            });
+
+            return response()->json($payload);
         } catch (\Throwable $e) {
             return response()->json(['message' => 'Erro ao listar produtos.'], 500);
         }

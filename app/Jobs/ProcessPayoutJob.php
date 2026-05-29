@@ -25,6 +25,11 @@ class ProcessPayoutJob implements ShouldQueue
     use Queueable;
     use SerializesModels;
 
+    public function __construct()
+    {
+        $this->onQueue('low'); // Repasses semanais não são urgentes
+    }
+
     public function handle(ProcessPayoutHandler $handler): void
     {
         $count = $handler->handle();

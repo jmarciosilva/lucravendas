@@ -19,6 +19,11 @@ class ExpireAbandonedCarts implements ShouldQueue
 {
     use Queueable;
 
+    public function __construct()
+    {
+        $this->onQueue('low'); // Limpeza periódica não é urgente
+    }
+
     public function handle(): void
     {
         $cutoff = Carbon::now()->subHours(24);

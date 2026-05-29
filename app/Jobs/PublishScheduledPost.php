@@ -27,6 +27,11 @@ class PublishScheduledPost implements ShouldQueue
     use Queueable;
     use SerializesModels;
 
+    public function __construct()
+    {
+        $this->onQueue('default');
+    }
+
     public function handle(
         PublishPostHandler                $handler,
         ScheduledPostRepositoryInterface  $repository,
