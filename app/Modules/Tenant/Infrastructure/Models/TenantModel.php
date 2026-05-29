@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Modules\Tenant\Infrastructure\Models;
 
+use Illuminate\Support\Str;
 use Stancl\Tenancy\Database\Models\Tenant as BaseTenantModel;
 use Stancl\Tenancy\Contracts\TenantWithDatabase;
 use Stancl\Tenancy\Database\Concerns\HasDatabase;
@@ -23,6 +24,10 @@ class TenantModel extends BaseTenantModel implements TenantWithDatabase
 
     protected $table = 'tenants';
 
+    public $incrementing = false;
+
+    protected $keyType = 'string';
+
     /** @var list<string> */
     protected $fillable = [
         'id',
@@ -41,7 +46,17 @@ class TenantModel extends BaseTenantModel implements TenantWithDatabase
         'deleted_at' => 'datetime',
     ];
 
-    protected static $customColumns = ['name', 'slug', 'plan', 'status', 'profile', 'origin_zipcode'];
+    // 'id' deve estar aqui para o stancl não redirecionar o UUID para o JSON data
+    protected static $customColumns = ['id', 'name', 'slug', 'plan', 'status', 'profile', 'origin_zipcode'];
+
+    protected static function booted(): void
+    {
+        static::creating(function (self $tenant): void {
+            if (empty($tenant->id)) {
+                $tenant->id = (string) Str::uuid();
+            }
+        });
+    }
 
     /**
      * Retorna os nomes de colunas personalizadas do tenant.
